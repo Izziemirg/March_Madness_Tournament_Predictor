@@ -1,1 +1,6 @@
 streamlit
+lightgbm==4.3.0
+pandas
+numpy
+matplotlib
+scikit-learn
