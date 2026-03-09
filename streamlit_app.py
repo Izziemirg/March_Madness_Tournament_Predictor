@@ -6,26 +6,68 @@ import lightgbm as lgb
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import random
 import warnings
 warnings.filterwarnings('ignore')
 
-st.set_page_config(page_title="🏀 March Madness Predictor 2025", layout="wide")
+st.set_page_config(page_title="🏀 March Madness Predictor 2026", layout="wide")
+
+# ── 2026 Bracket — update after Selection Sunday (March 15) ───────────────
+# Format: pairs in matchup order, region by region
+BRACKET_2026 = [
+    # EAST
+    "Duke", "American Univ",
+    "Mississippi St", "Boise St",
+    "Wisconsin", "Montana St",
+    "Kansas", "Howard",
+    "Michigan St", "Bryant",
+    "St John's", "Omaha",
+    "Memphis", "Colorado St",
+    "Auburn", "Alabama St",
+    # WEST
+    "Florida", "Norfolk St",
+    "UConn", "New Hampshire",
+    "Gonzaga", "McNeese St",
+    "Arizona", "Akron",
+    "Marquette", "Vermont",
+    "Texas Tech", "UNCW",
+    "Missouri", "Drake",
+    "Houston", "SIU Edwardsvll",
+    # SOUTH
+    "Tennessee", "Winthrop",
+    "Michigan", "CS Bakersfield",
+    "Iowa St", "Lipscomb",
+    "Alabama", "Mount St. Mary's",
+    "BYU", "VCU",
+    "Oregon", "Liberty",
+    "Kentucky", "Troy",
+    "Iowa", "S Dakota St",
+    # MIDWEST
+    "Kansas St", "Montana",
+    "Purdue", "TX Southern",
+    "Baylor", "Colgate",
+    "Maryland", "Grand Canyon",
+    "Clemson", "New Mexico St",
+    "UCLA", "UNC Asheville",
+    "Ole Miss", "Yale",
+    "Texas A&M", "Morehead St",
+]
+
 
 @st.cache_resource
-def load_data():
+def load_model_and_data():
     model = lgb.Booster(model_file='lgbm_model.txt')
     with open('app_data.pkl', 'rb') as f:
         d = pickle.load(f)
     return model, d
 
-model, d = load_data()
+model, d = load_model_and_data()
 
 feature_order = d['feature_order']
 teams_dict = d['teams']
-monte_carlo_results = d['monte_carlo_results']
-latest_season = d['latest_season']
 stats_index = d['stats_index']
 seeds_index = d['seeds_index']
+latest_season = d['latest_season']
 
 teams_df = pd.DataFrame.from_dict(teams_dict)
 team_lookup = dict(zip(teams_df['TeamID'], teams_df['TeamName']))
@@ -33,6 +75,7 @@ name_to_id = {v: k for k, v in team_lookup.items()}
 all_team_names = sorted(name_to_id.keys())
 
 
+# ── Core prediction functions ──────────────────────────────────────────────
 def get_matchup_features(t1_id, t2_id, season):
     s1 = stats_index.get((int(season), int(t1_id)))
     s2 = stats_index.get((int(season), int(t2_id)))
@@ -71,20 +114,121 @@ def get_matchup_features(t1_id, t2_id, season):
         'tor_diff': s1.get('TOR', 0) - s2.get('TOR', 0),
         'tord_diff': s1.get('TORD', 0) - s2.get('TORD', 0),
     }
-
     X = np.array([[row[f] for f in feature_order]], dtype=np.float32)
     return X, seed1, seed2
 
 
+def predict_winner_prob(t1_id, t2_id, season):
+    X, _, _ = get_matchup_features(t1_id, t2_id, season)
+    if X is None:
+        return 0.5
+    return float(model.predict(X)[0])
+
+
+def simulate_tournament(bracket_ids, season):
+    teams = bracket_ids.copy()
+    while len(teams) > 1:
+        next_round = []
+        if len(teams) % 2 != 0:
+            next_round.append(teams.pop())
+        for i in range(0, len(teams), 2):
+            p = predict_winner_prob(teams[i], teams[i+1], season)
+            next_round.append(teams[i] if random.random() < p else teams[i+1])
+        teams = next_round
+    return teams[0]
+
+
+def run_monte_carlo_live(bracket_ids, season, n_sims=1000, progress_bar=None):
+    champ_counts = {}
+    for i in range(n_sims):
+        champ = simulate_tournament(bracket_ids, season)
+        champ_counts[champ] = champ_counts.get(champ, 0) + 1
+        if progress_bar and i % 50 == 0:
+            progress_bar.progress(i / n_sims, text=f"Simulating... {i}/{n_sims}")
+    if progress_bar:
+        progress_bar.progress(1.0, text="Done!")
+    return {
+        tid: count / n_sims
+        for tid, count in sorted(champ_counts.items(), key=lambda x: -x[1])
+    }
+
+
 # ── UI ─────────────────────────────────────────────────────────────────────
-st.title("🏀 March Madness Predictor 2025")
-st.caption("LightGBM + Bart Torvik efficiency ratings · AUC: 0.771")
+st.title("🏀 March Madness Predictor 2026")
+st.caption("LightGBM + Bart Torvik efficiency ratings · AUC: 0.771 · Update bracket after Selection Sunday (March 15)")
 
-tab1, tab2 = st.tabs(["🆚 Head to Head", "🏆 Championship Odds"])
+tab1, tab2 = st.tabs(["🏆 Bracket Simulator", "🆚 Head to Head"])
 
-# ── Tab 1 ──────────────────────────────────────────────────────────────────
+
+# ── Tab 1: Bracket Simulator ───────────────────────────────────────────────
 with tab1:
-    st.subheader("Pick two teams to see win probability")
+    st.subheader("2026 NCAA Tournament Bracket Simulator")
+    st.info("🗓️ Bracket will be updated after Selection Sunday on March 15, 2026")
+
+    # Validate bracket teams
+    missing = [t for t in BRACKET_2026 if name_to_id.get(t) is None]
+    if missing:
+        st.warning(f"⚠️ These teams aren't in the dataset: {', '.join(missing)}")
+
+    st.markdown("**2026 Bracket Teams:**")
+    cols = st.columns(4)
+    regions = ["East", "West", "South", "Midwest"]
+    for i, region in enumerate(regions):
+        region_teams = BRACKET_2026[i*16:(i+1)*16]
+        with cols[i]:
+            st.markdown(f"**{region}**")
+            for j in range(0, 16, 2):
+                st.markdown(f"- {region_teams[j]} vs {region_teams[j+1]}")
+
+    if st.button("🎲 Run 1,000 Simulations", type="primary"):
+        bracket_ids = [name_to_id.get(t) for t in BRACKET_2026]
+
+        if None in bracket_ids:
+            st.error("Some teams not found — check team names match the dataset exactly.")
+        else:
+            progress = st.progress(0, text="Starting simulations...")
+
+            with st.spinner("Running Monte Carlo simulation..."):
+                results = run_monte_carlo_live(
+                    bracket_ids, latest_season,
+                    n_sims=1000, progress_bar=progress
+                )
+
+            top15 = list(results.items())[:15]
+            names = [team_lookup.get(tid, str(tid)) for tid, _ in top15]
+            probs = [p * 100 for _, p in top15]
+            colors = ['#f59e0b' if i == 0 else '#3b82f6' if i < 4 else '#64748b'
+                      for i in range(len(top15))]
+
+            fig, ax = plt.subplots(figsize=(10, 7))
+            fig.patch.set_facecolor('#0f172a')
+            ax.set_facecolor('#1e293b')
+            bars = ax.barh(names[::-1], probs[::-1], color=colors[::-1], height=0.6)
+            for bar, prob in zip(bars, probs[::-1]):
+                ax.text(bar.get_width() + 0.2, bar.get_y() + bar.get_height() / 2,
+                        f'{prob:.1f}%', va='center', color='white', fontweight='bold')
+            ax.set_xlabel('Championship Probability (%)', color='white')
+            ax.set_title('🏆 2026 March Madness Championship Odds\n(1,000 simulations · LightGBM + Torvik · AUC 0.771)',
+                         color='white', fontweight='bold')
+            ax.tick_params(colors='white')
+            ax.spines[:].set_visible(False)
+            plt.tight_layout()
+            st.pyplot(fig)
+
+            st.markdown("### 🏆 Top Championship Contenders")
+            medals = ["🥇", "🥈", "🥉"]
+            cols2 = st.columns(3)
+            for i, (tid, prob) in enumerate(top15):
+                name = team_lookup.get(tid, str(tid))
+                medal = medals[i] if i < 3 else f"{i+1}."
+                col_idx = i % 3
+                with cols2[col_idx]:
+                    st.metric(f"{medal} {name}", f"{prob:.1%}")
+
+
+# ── Tab 2: Head to Head ────────────────────────────────────────────────────
+with tab2:
+    st.subheader("Head to Head Matchup Predictor")
     col1, col2 = st.columns(2)
     with col1:
         team1_name = st.selectbox("Team A", all_team_names, index=all_team_names.index("Duke"))
@@ -115,11 +259,10 @@ with tab1:
 
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    st.metric(f"{team1_name} Win Probability", f"{prob_t1:.1%}")
+                    st.metric(f"{team1_name}", f"{prob_t1:.1%}", "Win Probability")
                 with col_b:
-                    st.metric(f"{team2_name} Win Probability", f"{prob_t2:.1%}")
+                    st.metric(f"{team2_name}", f"{prob_t2:.1%}", "Win Probability")
 
-                # Plot
                 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
                 fig.patch.set_facecolor('#0f172a')
                 for ax in [ax1, ax2]:
@@ -148,37 +291,3 @@ with tab1:
                 ax2.spines[:].set_visible(False)
                 plt.tight_layout()
                 st.pyplot(fig)
-
-
-# ── Tab 2 ──────────────────────────────────────────────────────────────────
-with tab2:
-    st.subheader("Pre-computed from 10,000 bracket simulations")
-
-    if st.button("Show Results 🏆", type="primary"):
-        top15 = list(monte_carlo_results.items())[:15]
-        names = [team_lookup.get(tid, str(tid)) for tid, _ in top15]
-        probs = [count * 100 for _, count in top15]
-        colors = ['#f59e0b' if i == 0 else '#3b82f6' if i < 4 else '#64748b'
-                  for i in range(len(top15))]
-
-        fig, ax = plt.subplots(figsize=(10, 7))
-        fig.patch.set_facecolor('#0f172a')
-        ax.set_facecolor('#1e293b')
-        bars = ax.barh(names[::-1], probs[::-1], color=colors[::-1], height=0.6)
-        for bar, prob in zip(bars, probs[::-1]):
-            ax.text(bar.get_width() + 0.2, bar.get_y() + bar.get_height() / 2,
-                    f'{prob:.1f}%', va='center', color='white', fontweight='bold')
-        ax.set_xlabel('Championship Probability (%)', color='white')
-        ax.set_title('🏆 2025 March Madness Championship Odds\n(10,000 simulations · LightGBM + Torvik · AUC 0.771)',
-                     color='white', fontweight='bold')
-        ax.tick_params(colors='white')
-        ax.spines[:].set_visible(False)
-        plt.tight_layout()
-        st.pyplot(fig)
-
-        st.markdown("### 🏆 Top Championship Contenders")
-        medals = ["🥇", "🥈", "🥉"]
-        for i, (tid, prob) in enumerate(top15):
-            name = team_lookup.get(tid, str(tid))
-            medal = medals[i] if i < 3 else f"{i+1}."
-            st.markdown(f"{medal} **{name}**: {prob:.1%}")
