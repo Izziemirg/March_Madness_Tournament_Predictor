@@ -320,6 +320,14 @@ def train_model(matchups, features, log_list):
     X = matchups[features].values.astype(np.float32)
     y = matchups['label'].values
 
+    # Diagnose and fix NaN/inf
+    nan_count = np.isnan(X).sum()
+    inf_count = np.isinf(X).sum()
+    if nan_count > 0 or inf_count > 0:
+        log_list.append(f"⚠️ Found {nan_count} NaN and {inf_count} inf values — replacing with 0")
+    X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
+    log_list.append(f"✅ Feature matrix: {X.shape[0]} rows × {X.shape[1]} features, all finite")
+
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     clf = LGBMClassifier(**BEST_PARAMS, verbosity=-1)
