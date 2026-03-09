@@ -409,24 +409,20 @@ kaggle_ok = all(os.path.exists(os.path.join(DATA_DIR, f)) for f in REQUIRED_KAGG
 torvik_ok = any(os.path.exists(os.path.join(DATA_DIR, f)) for f in TORVIK_FILES)
 model_ok = os.path.exists(MODEL_PATH) and os.path.exists(DATA_PKL_PATH)
 
-st.sidebar.markdown(f"""
+st.sidebar.markdown("""
 <div style="padding:16px 4px 20px 4px; border-bottom:1px solid rgba(255,165,0,0.15); margin-bottom:16px;">
     <div style="display:flex; align-items:center; gap:10px;">
-        <div style="background:linear-gradient(135deg,#ffa500,#ff6b00); width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:6px;">{svg_icon("ball", size=22, color="white")}</div>
+        <div style="background:linear-gradient(135deg,#ffa500,#ff6b00); width:36px; height:36px;
+                    border-radius:8px; display:flex; align-items:center; justify-content:center;
+                    padding:6px; box-shadow:0 3px 10px rgba(255,165,0,0.35);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93c4.24 4.24 9.9 4.24 14.14 0"/><path d="M4.93 19.07c4.24-4.24 9.9-4.24 14.14 0"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></div>
         <div>
-            <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:1.05rem; letter-spacing:0.08em; color:#e2e8f0;">MARCH MADNESS</div>
+            <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800;
+                        font-size:1.05rem; letter-spacing:0.08em; color:#e2e8f0;">MARCH MADNESS</div>
             <div style="font-size:0.65rem; color:#475569; letter-spacing:0.1em;">2026 PREDICTOR</div>
         </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
-
-NAV_MAP = {
-    "upload": "DATA REPOSITORY",
-    "train": "MODEL ENGINE",
-    "h2h": "MATCHUP LAB",
-    "bracket": "THE GAUNTLET"
-}
 
 page = st.sidebar.radio("Navigate", [
     "\U0001f4c1 Data Upload",
@@ -434,24 +430,6 @@ page = st.sidebar.radio("Navigate", [
     "\U0001f19a Head to Head",
     "\U0001f3c6 Bracket Simulator",
 ], label_visibility="collapsed")
-
-page_key = st.sidebar.radio("Navigate", list(NAV_MAP.keys()), format_func=lambda x: NAV_MAP[x], label_visibility="collapsed")
-
-# ── Page Routing ──
-if page_key == "upload":
-    page_header(svg_header_icon("upload"), "Data Repository", "Historical performance & efficiency datasets")
-    # [Insert your Data Upload UI code here]
-
-elif page_key == "train":
-    page_header(svg_header_icon("settings"), "Engine Room", "LightGBM training cycle")
-    # [Insert your Train Model UI code here]
-
-elif page_key == "h2h":
-    page_header(svg_header_icon("versus"), "Matchup Lab", "Direct win probability comparison")
-    # [Insert your Head to Head UI code here]
-
-elif page_key == "bracket":
-    page_header(svg_header_icon("trophy"), "The Gauntlet", "Monte Carlo tournament simulation")
 
 _gc = lambda ok, warn=False: '#22c55e' if ok else ('#f59e0b' if warn else '#dc2626')
 st.sidebar.markdown(f"""
