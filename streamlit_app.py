@@ -847,17 +847,84 @@ elif page == "🏆 Bracket Simulator":
         # Replace None with a dummy ID that returns 0.5 win prob
         bracket_ids = [b if b is not None else -1 for b in bracket_ids]
 
-        progress = st.progress(0, text="Starting simulations...")
-        champ_counts = {}
+    # Build seeds directly from bracket position (1=best, 16=worst per region)
+    # BRACKET_2026 is ordered: pairs within each region in seed order
+    # positions 0,2,4,6,8,10,12,14 = seeds 1,2,3,4,5,6,7,8 (higher seeds)
+    # positions 1,3,5,7,9,11,13,15 = seeds 16,15,14,13,12,11,10,9 (lower seeds)
+    seed_assignments = {}
+    seed_order = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15]
+    for region_idx in range(4):
+        region_teams = BRACKET_2026[region_idx * 16: (region_idx + 1) * 16]
+        for slot_idx, team_name in enumerate(region_teams):
+            tid = name_to_id.get(team_name)
+            if tid is not None:
+                seed_assignments[int(tid)] = seed_order[slot_idx]
 
-        for i in range(n_sims):
-            champ = simulate_tournament(model, bracket_ids, latest_season,
-                                        stats_index, seeds_index, feature_order)
-            champ_counts[champ] = champ_counts.get(champ, 0) + 1
-            if i % 50 == 0:
-                progress.progress(i / n_sims, text=f"Simulating... {i}/{n_sims}")
+    # Override predict_winner_prob to use bracket seeds when historical seeds missing
+    def predict_with_bracket_seeds(t1_id, t2_id):
+        if t1_id == -1 or t2_id == -1:
+            return 0.5
+        s1 = stats_index.get((int(latest_season), int(t1_id)))
+        s2 = stats_index.get((int(latest_season), int(t2_id)))
+        seed1 = seeds_index.get((int(latest_season), int(t1_id))) or seed_assignments.get(int(t1_id))
+        seed2 = seeds_index.get((int(latest_season), int(t2_id))) or seed_assignments.get(int(t2_id))
+        if s1 is None or s2 is None or seed1 is None or seed2 is None:
+            return 0.5
 
-        progress.progress(1.0, text="Done!")
+        def g(obj, key):
+            return obj.get(key, 0) if isinstance(obj, dict) else getattr(obj, key, 0)
+
+        row = {
+            'seed_diff': seed1 - seed2,
+            'margin_diff': g(s1,'margin') - g(s2,'margin'),
+            'win_pct_diff': g(s1,'win_pct') - g(s2,'win_pct'),
+            'pts_for_diff': g(s1,'pts_for') - g(s2,'pts_for'),
+            'pts_against_diff': g(s1,'pts_against') - g(s2,'pts_against'),
+            'fg_pct_diff': g(s1,'fg_pct') - g(s2,'fg_pct'),
+            'fg3_pct_diff': g(s1,'fg3_pct') - g(s2,'fg3_pct'),
+            'reb_diff': g(s1,'reb') - g(s2,'reb'),
+            'ast_diff': g(s1,'ast') - g(s2,'ast'),
+            'to_diff': g(s1,'to') - g(s2,'to'),
+            'off_eff_diff': g(s1,'off_efficiency') - g(s2,'off_efficiency'),
+            'def_eff_diff': g(s1,'def_efficiency') - g(s2,'def_efficiency'),
+            'tempo_diff': g(s1,'tempo') - g(s2,'tempo'),
+            'seed_t1': seed1, 'seed_t2': seed2,
+            'conf_margin_diff': g(s1,'conf_avg_margin') - g(s2,'conf_avg_margin'),
+            'conf_win_pct_diff': g(s1,'conf_avg_win_pct') - g(s2,'conf_avg_win_pct'),
+            'neutral_win_pct_diff': g(s1,'neutral_win_pct') - g(s2,'neutral_win_pct'),
+            'adjoe_diff': g(s1,'ADJOE') - g(s2,'ADJOE'),
+            'adjde_diff': g(s1,'ADJDE') - g(s2,'ADJDE'),
+            'barthag_diff': g(s1,'BARTHAG') - g(s2,'BARTHAG'),
+            'adj_t_diff': g(s1,'ADJ_T') - g(s2,'ADJ_T'),
+            'wab_diff': g(s1,'WAB') - g(s2,'WAB'),
+            'efg_o_diff': g(s1,'EFG_O') - g(s2,'EFG_O'),
+            'efg_d_diff': g(s1,'EFG_D') - g(s2,'EFG_D'),
+            'tor_diff': g(s1,'TOR') - g(s2,'TOR'),
+            'tord_diff': g(s1,'TORD') - g(s2,'TORD'),
+        }
+        X = np.array([[row[f] for f in feature_order]], dtype=np.float32)
+        return float(model.predict(X)[0])
+
+    def simulate_tournament_2026(bracket_ids):
+        teams = bracket_ids.copy()
+        while len(teams) > 1:
+            next_round = []
+            if len(teams) % 2 != 0:
+                next_round.append(teams.pop())
+            for i in range(0, len(teams), 2):
+                p = predict_with_bracket_seeds(teams[i], teams[i+1])
+                next_round.append(teams[i] if random.random() < p else teams[i+1])
+            teams = next_round
+        return teams[0]
+
+    progress = st.progress(0, text="Starting simulations...")
+    champ_counts = {}
+    for i in range(n_sims):
+        champ = simulate_tournament_2026(bracket_ids)
+        champ_counts[champ] = champ_counts.get(champ, 0) + 1
+        if i % 50 == 0:
+            progress.progress(i / n_sims, text=f"Simulating... {i}/{n_sims}")
+    progress.progress(1.0, text="Done!")
 
         results = {
             tid: count / n_sims
