@@ -926,13 +926,13 @@ elif page == "🏆 Bracket Simulator":
             progress.progress(i / n_sims, text=f"Simulating... {i}/{n_sims}")
     progress.progress(1.0, text="Done!")
 
-    results = {
+        results = {
             tid: count / n_sims
             for tid, count in sorted(champ_counts.items(), key=lambda x: -x[1])
             if tid != -1  # exclude dummy ID for unmatched teams
         }
 
-    top15 = list(results.items())[:15]
+        top15 = list(results.items())[:15]
         names = [team_lookup.get(tid, str(tid)) for tid, _ in top15]
         probs = [p * 100 for _, p in top15]
         colors = ['#f59e0b' if i == 0 else '#3b82f6' if i < 4 else '#64748b'
