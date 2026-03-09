@@ -251,7 +251,7 @@ def build_matchups(tourney_df, team_stats, seeds_df):
         s, w, l = int(game.Season), int(game.WTeamID), int(game.LTeamID)
         sw, sl = stats_index.get((s, w)), stats_index.get((s, l))
         seedw, seedl = seeds_index.get((s, w)), seeds_index.get((s, l))
-        if not all([sw, sl, seedw, seedl]): continue
+        if sw is None or sl is None or seedw is None or seedl is None: continue
         def diff(a, b, col): return getattr(a, col, 0) - getattr(b, col, 0)
         for t1, t2, seed1, seed2, label in [(sw, sl, seedw, seedl, 1), (sl, sw, seedl, seedw, 0)]:
             row = {'seed_diff': seed1 - seed2, 'margin_diff': diff(t1, t2, 'margin'), 'win_pct_diff': diff(t1, t2, 'win_pct'), 'pts_for_diff': diff(t1, t2, 'pts_for'), 'pts_against_diff': diff(t1, t2, 'pts_against'), 'fg_pct_diff': diff(t1, t2, 'fg_pct'), 'fg3_pct_diff': diff(t1, t2, 'fg3_pct'), 'reb_diff': diff(t1, t2, 'reb'), 'ast_diff': diff(t1, t2, 'ast'), 'to_diff': diff(t1, t2, 'to'), 'off_eff_diff': diff(t1, t2, 'off_efficiency'), 'def_eff_diff': diff(t1, t2, 'def_efficiency'), 'tempo_diff': diff(t1, t2, 'tempo'), 'seed_t1': seed1, 'seed_t2': seed2, 'conf_margin_diff': diff(t1, t2, 'conf_avg_margin'), 'conf_win_pct_diff': diff(t1, t2, 'conf_avg_win_pct'), 'neutral_win_pct_diff': diff(t1, t2, 'neutral_win_pct'), 'adjoe_diff': diff(t1, t2, 'ADJOE'), 'adjde_diff': diff(t1, t2, 'ADJDE'), 'barthag_diff': diff(t1, t2, 'BARTHAG'), 'adj_t_diff': diff(t1, t2, 'ADJ_T'), 'wab_diff': diff(t1, t2, 'WAB'), 'efg_o_diff': diff(t1, t2, 'EFG_O'), 'efg_d_diff': diff(t1, t2, 'EFG_D'), 'tor_diff': diff(t1, t2, 'TOR'), 'tord_diff': diff(t1, t2, 'TORD'), 'label': label}
