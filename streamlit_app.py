@@ -926,7 +926,7 @@ elif page == "🏆 Bracket Simulator":
             progress.progress(i / n_sims, text=f"Simulating... {i}/{n_sims}")
     progress.progress(1.0, text="Done!")
 
-        results = {
+    results = {
             tid: count / n_sims
             for tid, count in sorted(champ_counts.items(), key=lambda x: -x[1])
             if tid != -1  # exclude dummy ID for unmatched teams
