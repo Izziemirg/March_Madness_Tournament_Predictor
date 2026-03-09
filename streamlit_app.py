@@ -25,7 +25,7 @@ plt.rcParams.update({
     'axes.grid': False,
 })
 
-st.set_page_config(page_title="March Madness Predictor", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="March Madness · 2026 Predictor", layout="wide", initial_sidebar_state="expanded")
 
 # ── CSS Injection ─────────────────────────────────────────────────────────
 st.markdown("""
@@ -188,18 +188,141 @@ hr { border-color: rgba(255,165,0,0.12) !important; }
 
 /* Hide chrome */
 #MainMenu, footer, header { visibility: hidden; }
+
+/* SVG icon utility */
+.mm-icon { display:inline-flex; align-items:center; justify-content:center; }
+.mm-icon svg { display:block; }
 </style>
 """, unsafe_allow_html=True)
 
+# ── SVG Icon Library ──────────────────────────────────────────────────────
+def svg_icon(key, size=20, color="currentColor"):
+    """Return an inline SVG string for use in st.markdown HTML."""
+    icons = {
+        "ball": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M4.93 4.93c4.24 4.24 9.9 4.24 14.14 0"/>
+            <path d="M4.93 19.07c4.24-4.24 9.9-4.24 14.14 0"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <line x1="12" y1="2" x2="12" y2="22"/>
+        </svg>''',
+        "upload": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>''',
+        "settings": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06
+                     a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09
+                     A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83
+                     l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09
+                     A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83
+                     l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09
+                     a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83
+                     l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09
+                     a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>''',
+        "versus": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="16 3 21 3 21 8"/>
+            <line x1="4" y1="20" x2="21" y2="3"/>
+            <polyline points="21 16 21 21 16 21"/>
+            <line x1="15" y1="15" x2="21" y2="21"/>
+        </svg>''',
+        "trophy": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+            <path d="M4 22h16"/>
+            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+        </svg>''',
+        "dice": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="3" ry="3"/>
+            <circle cx="8" cy="8" r="1.2" fill="{c}" stroke="none"/>
+            <circle cx="16" cy="8" r="1.2" fill="{c}" stroke="none"/>
+            <circle cx="8" cy="16" r="1.2" fill="{c}" stroke="none"/>
+            <circle cx="16" cy="16" r="1.2" fill="{c}" stroke="none"/>
+            <circle cx="12" cy="12" r="1.2" fill="{c}" stroke="none"/>
+        </svg>''',
+        "rocket": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91
+                     a2.18 2.18 0 0 0-2.91-.09z"/>
+            <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11
+                     a22.35 22.35 0 0 1-4 2z"/>
+            <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+            <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+        </svg>''',
+        "calendar": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>''',
+        "check": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>''',
+        "x": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>''',
+        "warning": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3
+                     L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>''',
+        "clock": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+        </svg>''',
+        "medal1": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="15" r="7"/>
+            <polyline points="8.56 2.75 4.5 9 8 9 9.5 12 12 5 14.5 12 16 9 19.5 9 15.44 2.75"/>
+            <text x="12" y="19" text-anchor="middle" font-size="7" font-weight="800"
+                  stroke="none" fill="{c}" font-family="sans-serif">1</text>
+        </svg>''',
+        "chevron_up": '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+            stroke="{c}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"/>
+        </svg>''',
+    }
+    path = icons.get(key, icons["ball"])
+    filled = path.replace("{c}", color)
+    return f'<span class="mm-icon" style="width:{size}px;height:{size}px;">{filled}</span>'
+
+def svg_btn_icon(key, size=16):
+    """SVG for use inside button labels (black text context)."""
+    return svg_icon(key, size=size, color="#000000")
+
+def svg_header_icon(key, size=24):
+    """SVG for page header icon boxes."""
+    return svg_icon(key, size=size, color="#ffffff")
+
+
 # ── Page Header Helper ────────────────────────────────────────────────────
-def page_header(icon, title, subtitle, accent="#ffa500"):
+def page_header(icon_html, title, subtitle, accent="#ffa500"):
     st.markdown(f"""
-    <div style="display:flex; align-items:center; gap:14px; margin-bottom:28px;
+    <div style="display:flex; align-items:center; gap:16px; margin-bottom:28px;
                 padding-bottom:20px; border-bottom:1px solid rgba(255,165,0,0.12);">
-        <div style="background:linear-gradient(135deg,{accent},{accent}88);
+        <div style="background:linear-gradient(135deg,{accent},{accent}99);
                     width:48px; height:48px; border-radius:12px; display:flex;
-                    align-items:center; justify-content:center; font-size:1.5rem;
-                    box-shadow:0 4px 16px {accent}44; flex-shrink:0;">{icon}</div>
+                    align-items:center; justify-content:center;
+                    box-shadow:0 4px 16px {accent}44; flex-shrink:0;
+                    padding:10px;">{icon_html}</div>
         <div>
             <div style="font-family:'Barlow Condensed',sans-serif; font-size:1.9rem;
                         font-weight:800; letter-spacing:0.05em; text-transform:uppercase;
@@ -291,7 +414,7 @@ st.sidebar.markdown("""
     <div style="display:flex; align-items:center; gap:10px;">
         <div style="background:linear-gradient(135deg,#ffa500,#ff6b00); width:36px; height:36px;
                     border-radius:8px; display:flex; align-items:center; justify-content:center;
-                    font-size:1.1rem; box-shadow:0 3px 10px rgba(255,165,0,0.35);">&#127936;</div>
+                    padding:6px; box-shadow:0 3px 10px rgba(255,165,0,0.35);"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93c4.24 4.24 9.9 4.24 14.14 0"/><path d="M4.93 19.07c4.24-4.24 9.9-4.24 14.14 0"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg></div>
         <div>
             <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800;
                         font-size:1.05rem; letter-spacing:0.08em; color:#e2e8f0;">MARCH MADNESS</div>
@@ -425,7 +548,7 @@ def build_team_stats(season_df, teams_df, conf_df, torvik_df=None):
     neutral_stats['neutral_win_pct'] = neutral_stats['nw'] / (neutral_stats['nw'] + neutral_stats['nl']).clip(lower=1)
     stats = stats.merge(neutral_stats[['Season', 'TeamID', 'neutral_win_pct']], on=['Season', 'TeamID'], how='left').fillna(0)
 
-    log.append(f"✅ Base stats built: {len(stats)} team-seasons")
+    log.append(f"[OK] Base stats built: {len(stats)} team-seasons")
 
     # Torvik merge
     torvik_features = ['ADJOE', 'ADJDE', 'BARTHAG', 'ADJ_T', 'WAB', 'EFG_O', 'EFG_D', 'TOR', 'TORD']
@@ -454,14 +577,14 @@ def build_team_stats(season_df, teams_df, conf_df, torvik_df=None):
             stats[col] = stats[col].fillna(global_avg)
 
         missing_after = stats['BARTHAG'].isna().sum()
-        log.append(f"✅ Torvik features merged — {missing_after} missing after imputation (should be 0)")
+        log.append(f"[OK] Torvik features merged — {missing_after} missing after imputation (should be 0)")
         has_torvik = True
     else:
         for col in torvik_features:
             stats[col] = 0.0
-        log.append("⚠️ No Torvik data — using zeros for Torvik features (lower AUC expected)")
+        log.append("[WARN] No Torvik data — using zeros for Torvik features (lower AUC expected)")
 
-    log.append(f"✅ Final stats shape: {stats.shape}")
+    log.append(f"[OK] Final stats shape: {stats.shape}")
     return stats, log, has_torvik
 
 
@@ -532,7 +655,7 @@ def build_matchups(tourney_df, team_stats, seeds_df):
             rows.append(row)
 
     matchups = pd.DataFrame(rows)
-    log.append(f"✅ Built {len(matchups)} matchup rows from {len(tourney_df)} tournament games")
+    log.append(f"[OK] Built {len(matchups)} matchup rows from {len(tourney_df)} tournament games")
     return matchups, all_features, log
 
 
@@ -548,9 +671,9 @@ def train_model(matchups, features, log_list):
     nan_count = np.isnan(X).sum()
     inf_count = np.isinf(X).sum()
     if nan_count > 0 or inf_count > 0:
-        log_list.append(f"⚠️ Found {nan_count} NaN and {inf_count} inf values — replacing with 0")
+        log_list.append(f"[WARN] Found {nan_count} NaN and {inf_count} inf values — replacing with 0")
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
-    log_list.append(f"✅ Feature matrix: {X.shape[0]} rows × {X.shape[1]} features, all finite")
+    log_list.append(f"[OK] Feature matrix: {X.shape[0]} rows × {X.shape[1]} features, all finite")
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -562,7 +685,7 @@ def train_model(matchups, features, log_list):
     acc = accuracy_score(y_test, y_pred)
     auc = roc_auc_score(y_test, y_prob)
 
-    log_list.append(f"✅ Model trained — Accuracy: {acc:.3f} | AUC: {auc:.3f}")
+    log_list.append(f"[OK] Model trained — Accuracy: {acc:.3f} | AUC: {auc:.3f}")
     return clf, acc, auc, log_list
 
 
@@ -626,8 +749,8 @@ def simulate_tournament(model, bracket_ids, season, stats_index, seeds_index, fe
 # ══════════════════════════════════════════════════════════════════════════
 # PAGE 1 — DATA UPLOAD
 # ══════════════════════════════════════════════════════════════════════════
-if page == "📁 Data Upload":
-    page_header("📁", "Data Repository", "Upload historical performance & efficiency datasets")
+if page == "Data Upload":
+    page_header(svg_header_icon("upload"), "Data Repository", "Upload historical performance & efficiency datasets")
 
     col1, col2 = st.columns(2, gap="large")
 
@@ -691,21 +814,21 @@ if page == "📁 Data Upload":
 
     st.markdown("<div style='margin-top:16px;'>", unsafe_allow_html=True)
     if kaggle_ok:
-        st.success("✅ All required files present — head to **Train Model** to continue!")
+        st.success("All required files present — head to **Train Model** to continue!")
     else:
         missing = [f for f in REQUIRED_KAGGLE if not os.path.exists(os.path.join(DATA_DIR, f))]
-        st.warning(f"Still needed: {', '.join(missing)}")
+        st.warning(f"Required files still missing: {', '.join(missing)}")
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════
 # PAGE 2 — TRAIN MODEL
 # ══════════════════════════════════════════════════════════════════════════
-elif page == "⚙️ Train Model":
-    page_header("⚙️", "Engine Room", "LightGBM training · Optuna-tuned hyperparameters")
+elif page == "Train Model":
+    page_header(svg_header_icon("settings"), "Engine Room", "LightGBM training · Optuna-tuned hyperparameters")
 
     if not kaggle_ok:
-        st.error("❌ Missing Kaggle files. Go to **Data Upload** first.")
+        st.error("Missing Kaggle files — go to Data Upload first.")
         st.stop()
 
     col1, col2 = st.columns(2, gap="large")
@@ -734,11 +857,11 @@ elif page == "⚙️ Train Model":
             <div style="font-size:0.72rem; color:#64748b; letter-spacing:0.1em; margin-bottom:8px;">AUC SCORE</div>
             <span style="background:{torvik_color}22; color:{torvik_color}; padding:3px 10px;
                          border-radius:20px; font-size:0.72rem; font-weight:700; letter-spacing:0.08em;">{torvik_label}</span>
-            <div style="font-size:0.78rem; color:#475569; margin-top:10px;">⌛ ~30–60 seconds</div>
+            <div style="font-size:0.78rem; color:#475569; margin-top:10px;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;display:inline-block;vertical-align:middle;margin-right:5px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>~30–60 seconds</div>
         </div>""", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:20px;'>", unsafe_allow_html=True)
-    if st.button("🚀 Execute Training", type="primary"):
+    if st.button("Execute Training", type="primary"):
         log_box = st.empty()
         log_lines = []
 
@@ -751,7 +874,7 @@ elif page == "⚙️ Train Model":
             teams_df = pd.read_csv(os.path.join(DATA_DIR, "MTeams.csv"))
             seeds_df = pd.read_csv(os.path.join(DATA_DIR, "MNCAATourneySeeds.csv"))
             conf_df = pd.read_csv(os.path.join(DATA_DIR, "MTeamConferences.csv"))
-            log_lines.append("✅ Kaggle files loaded")
+            log_lines.append("[OK] Kaggle files loaded")
 
             torvik_df = None
             if torvik_ok:
@@ -859,14 +982,14 @@ elif page == "⚙️ Train Model":
 
                         unmatched = torvik_raw[torvik_raw['TeamID'].isna()]['TEAM'].nunique()
                         matched = torvik_raw['TeamID'].notna().sum()
-                        log_lines.append(f"✅ Torvik name mapping: {matched} rows matched, {unmatched} unique teams unmatched")
+                        log_lines.append(f"[OK] Torvik name mapping: {matched} rows matched, {unmatched} unique teams unmatched")
 
                         torvik_raw = torvik_raw.dropna(subset=['TeamID'])
                         torvik_raw['TeamID'] = torvik_raw['TeamID'].astype(int)
                         torvik_df = torvik_raw
-                        log_lines.append(f"✅ Torvik data loaded: {len(torvik_df)} rows, seasons {sorted(torvik_df['Season'].unique())[:3]}...{sorted(torvik_df['Season'].unique())[-1]}")
+                        log_lines.append(f"[OK] Torvik data loaded: {len(torvik_df)} rows, seasons {sorted(torvik_df['Season'].unique())[:3]}...{sorted(torvik_df['Season'].unique())[-1]}")
                     else:
-                        log_lines.append("⚠️ Could not find Year/Team columns in Torvik files")
+                        log_lines.append("[WARN] Could not find Year/Team columns in Torvik files")
             update_log(log_lines)
 
         with st.spinner("Building team stats..."):
@@ -913,10 +1036,10 @@ elif page == "⚙️ Train Model":
             with open(DATA_PKL_PATH, 'wb') as f:
                 pickle.dump(app_data, f)
 
-            log_lines.append(f"✅ Model saved to {MODEL_PATH}")
-            log_lines.append(f"✅ App data saved to {DATA_PKL_PATH}")
+            log_lines.append(f"[OK] Model saved to {MODEL_PATH}")
+            log_lines.append(f"[OK] App data saved to {DATA_PKL_PATH}")
             log_lines.append(f"")
-            log_lines.append(f"🏀 Ready! Head to Head and Bracket Simulator are now available.")
+            log_lines.append(f"[READY] Head to Head and Bracket Simulator are now available.")
             update_log(log_lines)
 
         st.markdown("</div>", unsafe_allow_html=True)
@@ -939,23 +1062,23 @@ elif page == "⚙️ Train Model":
             </div>
         </div>
         """, unsafe_allow_html=True)
-        st.success("✅ Model trained and saved — Head to Head and Bracket Simulator are ready!")
+        st.success("Model trained and saved — Head to Head and Bracket Simulator are ready!")
         st.cache_resource.clear()
 
 
 # ══════════════════════════════════════════════════════════════════════════
 # PAGE 3 — HEAD TO HEAD
 # ══════════════════════════════════════════════════════════════════════════
-elif page == "🆚 Head to Head":
-    page_header("🆚", "Matchup Lab", "Direct win probability comparison · 27-feature LightGBM model")
+elif page == "Head to Head":
+    page_header(svg_header_icon("versus"), "Matchup Lab", "Direct win probability comparison · 27-feature LightGBM model")
 
     if not model_ok:
-        st.error("❌ No trained model found. Go to **Train Model** first.")
+        st.error("No trained model found — go to Train Model first.")
         st.stop()
 
     model, d = load_model_and_data()
     if model is None:
-        st.error("❌ Could not load model.")
+        st.error("Could not load model.")
         st.stop()
 
     feature_order = d['feature_order']
@@ -984,7 +1107,7 @@ elif page == "🆚 Head to Head":
         team2_name = st.selectbox("Team B", all_team_names, index=default_idx2, label_visibility="collapsed")
 
     st.markdown("<div style='margin-top:12px;'>", unsafe_allow_html=True)
-    if st.button("🏀 Calculate Win Probability", type="primary"):
+    if st.button("Calculate Win Probability", type="primary"):
         if team1_name == team2_name:
             st.error("Please select two different teams.")
         else:
@@ -1028,7 +1151,7 @@ elif page == "🆚 Head to Head":
                 <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; color:#64748b;">
                     {seed1_str.upper()}</div>
                 <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.78rem; font-weight:700;
-                            color:#22c55e;">▲ {favored.upper()} FAVORED &mdash; {fav_prob:.1%}</div>
+                            color:#22c55e;"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='#22c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:11px;height:11px;display:inline-block;vertical-align:middle;margin-right:4px;'><polyline points='18 15 12 9 6 15'/></svg>{favored.upper()} FAVORED &mdash; {fav_prob:.1%}</div>
                 <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; color:#64748b;
                             text-align:right;">{seed2_str.upper()}</div>
             </div>
@@ -1061,16 +1184,16 @@ elif page == "🆚 Head to Head":
 # ══════════════════════════════════════════════════════════════════════════
 # PAGE 4 — BRACKET SIMULATOR
 # ══════════════════════════════════════════════════════════════════════════
-elif page == "🏆 Bracket Simulator":
-    page_header("🏆", "The Gauntlet", "Monte Carlo tournament simulation · 2026 bracket")
+elif page == "Bracket Simulator":
+    page_header(svg_header_icon("trophy"), "The Gauntlet", "Monte Carlo tournament simulation · 2026 bracket")
 
     if not model_ok:
-        st.error("❌ No trained model found. Go to **Train Model** first.")
+        st.error("No trained model found — go to Train Model first.")
         st.stop()
 
     model, d = load_model_and_data()
     if model is None:
-        st.error("❌ Could not load model.")
+        st.error("Could not load model.")
         st.stop()
 
     feature_order = d['feature_order']
@@ -1085,7 +1208,7 @@ elif page == "🏆 Bracket Simulator":
     name_to_id = {v: k for k, v in team_lookup.items()}
     all_team_names = sorted(name_to_id.keys())
 
-    st.info("📅 Bracket finalizes on Selection Sunday, March 15 — update BRACKET_2026 then retrain for live predictions.")
+    st.info("Bracket finalizes on Selection Sunday, March 15 — update BRACKET_2026 then retrain for live predictions.")
 
     # Styled bracket preview
     st.markdown("""<div style="font-family:'Barlow Condensed',sans-serif; font-size:0.7rem; font-weight:700;
@@ -1135,12 +1258,12 @@ elif page == "🏆 Bracket Simulator":
             </div>""", unsafe_allow_html=True)
 
     if missing_teams:
-        st.warning(f"⚠️ {len(set(missing_teams))} teams not in dataset (50/50 odds): {', '.join(sorted(set(missing_teams)))}")
+        st.warning(f"{len(set(missing_teams))} teams not found in dataset (50/50 odds): {', '.join(sorted(set(missing_teams)))}")
 
     st.markdown("<div style='margin-top:20px;'>", unsafe_allow_html=True)
     n_sims = st.slider("Number of simulations", min_value=100, max_value=2000, value=1000, step=100)
 
-    if st.button(f"🎲 Run {n_sims:,} Simulations", type="primary"):
+    if st.button(f"Run {n_sims:,} Simulations", type="primary"):
         bracket_ids = [name_to_id.get(t) for t in BRACKET_2026]
         # Replace None with a dummy ID that returns 0.5 win prob
         bracket_ids = [b if b is not None else -1 for b in bracket_ids]
@@ -1270,7 +1393,7 @@ elif page == "🏆 Bracket Simulator":
             bar_w = int((prob / max_prob) * 120)
             if i < 3:
                 rc, bg, border = rank_styles[i]
-                rank_label = ["🥇","🥈","🥉"][i]
+                rank_label = ["1","2","3"][i]
             else:
                 rc, bg, border = "#475569", "rgba(255,255,255,0.03)", "rgba(255,255,255,0.06)"
                 rank_label = str(i + 1)
