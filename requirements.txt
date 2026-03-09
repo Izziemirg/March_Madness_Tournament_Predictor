@@ -1,5 +1,5 @@
 streamlit
-lightgbm==4.3.0
+lightgbm
 pandas
 numpy
 matplotlib
