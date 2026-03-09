@@ -209,15 +209,29 @@ def build_team_stats(season_df, teams_df, conf_df, torvik_df=None):
 
     if torvik_df is not None:
         log.append("Merging Torvik data...")
-        stats = stats.merge(torvik_df[['Season', 'TeamID'] + [f for f in torvik_features if f in torvik_df.columns]],
-                            on=['Season', 'TeamID'], how='left')
+        available_torvik_cols = [f for f in torvik_features if f in torvik_df.columns]
+        stats = stats.merge(
+            torvik_df[['Season', 'TeamID'] + available_torvik_cols],
+            on=['Season', 'TeamID'], how='left'
+        )
+        # Add any missing Torvik cols as 0
         for col in torvik_features:
-            if col in stats.columns:
-                stats[col] = stats[col].fillna(stats[col].mean())
-            else:
+            if col not in stats.columns:
                 stats[col] = 0.0
+
+        # Stage 1: fill with season average (handles teams missing from Torvik within covered seasons)
+        for col in torvik_features:
+            season_avg = stats.groupby('Season')[col].transform('mean')
+            stats[col] = stats[col].fillna(season_avg)
+
+        # Stage 2: fill remaining with global average (handles pre-2013 seasons entirely)
+        for col in torvik_features:
+            global_avg = stats[col].mean()
+            stats[col] = stats[col].fillna(global_avg)
+
+        missing_after = stats['BARTHAG'].isna().sum()
+        log.append(f"✅ Torvik features merged — {missing_after} missing after imputation (should be 0)")
         has_torvik = True
-        log.append(f"✅ Torvik features merged")
     else:
         for col in torvik_features:
             stats[col] = 0.0
@@ -504,20 +518,109 @@ elif page == "⚙️ Train Model":
                         parts.append(pd.read_csv(path))
                 if parts:
                     torvik_raw = pd.concat(parts, ignore_index=True).drop_duplicates()
-
-                    # Basic Torvik name → TeamID mapping
                     torvik_raw.columns = [c.upper() for c in torvik_raw.columns]
                     year_col = next((c for c in torvik_raw.columns if 'YEAR' in c), None)
                     team_col = next((c for c in torvik_raw.columns if c in ['TEAM', 'TEAM NAME']), None)
+
                     if year_col and team_col:
-                        torvik_raw = torvik_raw.rename(columns={year_col: 'Season', team_col: 'TeamName'})
+                        torvik_raw = torvik_raw.rename(columns={year_col: 'Season', team_col: 'TEAM'})
                         torvik_raw['Season'] = torvik_raw['Season'].astype(int)
-                        name_map = dict(zip(teams_df['TeamName'].str.lower(), teams_df['TeamID']))
-                        torvik_raw['TeamID'] = torvik_raw['TeamName'].str.lower().map(name_map)
+
+                        # Full name mapping — Torvik name → Kaggle name (v2 + v3 combined)
+                        name_map_v2 = {
+                            'Alabama St.': 'Alabama St', 'Albany': 'SUNY Albany',
+                            'Alcorn St.': 'Alcorn St', 'Appalachian St.': 'Appalachian St',
+                            'Arizona St.': 'Arizona St', 'Arkansas Little Rock': 'Ark Little Rock',
+                            'Arkansas St.': 'Arkansas St', 'Ball St.': 'Ball St',
+                            'Boise St.': 'Boise St', 'Central Arkansas': 'Cent Arkansas',
+                            'Central Michigan': 'C Michigan', 'Chicago St.': 'Chicago St',
+                            'Cleveland St.': 'Cleveland St', 'Colorado St.': 'Colorado St',
+                            'Coppin St.': 'Coppin St', 'Delaware St.': 'Delaware St',
+                            'Dixie St.': 'Utah Tech', 'East Tennessee St.': 'ETSU',
+                            'Florida Gulf Coast': 'FGCU', 'Florida St.': 'Florida St',
+                            'Fort Wayne': 'PFW', 'Fresno St.': 'Fresno St',
+                            'Georgia St.': 'Georgia St', 'Houston Baptist': 'Houston Chr',
+                            'IPFW': 'PFW', 'Idaho St.': 'Idaho St',
+                            'Illinois St.': 'Illinois St', 'Indiana St.': 'Indiana St',
+                            'Iowa St.': 'Iowa St', 'Jackson St.': 'Jackson St',
+                            'Jacksonville St.': 'Jacksonville St', 'Kansas St.': 'Kansas St',
+                            'Kennesaw St.': 'Kennesaw', 'Little Rock': 'Ark Little Rock',
+                            'Long Beach St.': 'Long Beach St', 'Louisiana Monroe': 'ULM',
+                            'Loyola Marymount': 'Loy Marymount', 'McNeese St.': 'McNeese St',
+                            'Michigan St.': 'Michigan St', 'Middle Tennessee': 'MTSU',
+                            'Mississippi St.': 'Mississippi St', 'Mississippi Valley St.': 'MS Valley St',
+                            'Missouri St.': 'Missouri St', 'Montana St.': 'Montana St',
+                            'Morehead St.': 'Morehead St', 'Morgan St.': 'Morgan St',
+                            'Murray St.': 'Murray St', 'Nebraska Omaha': 'NE Omaha',
+                            'New Mexico St.': 'New Mexico St', 'Nicholls St.': 'Nicholls St',
+                            'Norfolk St.': 'Norfolk St', 'North Dakota St.': 'N Dakota St',
+                            'Northwestern St.': 'Northwestern LA', 'Ohio St.': 'Ohio St',
+                            'Oklahoma St.': 'Oklahoma St', 'Oregon St.': 'Oregon St',
+                            'Penn St.': 'Penn St', 'Portland St.': 'Portland St',
+                            'SIU Edwardsville': 'SIUE', 'Sacramento St.': 'CS Sacramento',
+                            "Saint Joseph's": "St Joseph's PA", 'Saint Louis': 'St Louis',
+                            "Saint Mary's": "St Mary's CA", "Saint Peter's": "St Peter's",
+                            'Sam Houston St.': 'Sam Houston St', 'San Diego St.': 'San Diego St',
+                            'San Jose St.': 'San Jose St', 'Savannah St.': 'Savannah St',
+                            'South Carolina St.': 'S Carolina St', 'South Dakota St.': 'S Dakota St',
+                            'Southeast Missouri St.': 'SE Missouri St', 'Tarleton St.': 'Tarleton St',
+                            'Tennessee Martin': 'TN Martin', 'Tennessee St.': 'Tennessee St',
+                            'Texas A&M Commerce': 'East Texas A&M', 'Texas A&M Corpus Chris': 'TAM C. Christi',
+                            'Texas St.': 'Texas St', 'UMKC': 'Missouri KC',
+                            'Utah St.': 'Utah St', 'Washington St.': 'Washington St',
+                            'Weber St.': 'Weber St', 'Western Kentucky': 'WKU',
+                            'Wichita St.': 'Wichita St', 'Wright St.': 'Wright St',
+                            'Youngstown St.': 'Youngstown St',
+                        }
+                        name_map_v3 = {
+                            'Abilene Christian': 'Abilene Chr', 'American': 'American Univ',
+                            'Arkansas Pine Bluff': 'Ark Pine Bluff', 'Bethune Cookman': 'Bethune-Cookman',
+                            'Boston University': 'Boston Univ', 'Cal St. Bakersfield': 'CS Bakersfield',
+                            'Cal St. Fullerton': 'CS Fullerton', 'Cal St. Northridge': 'CS Northridge',
+                            'Central Connecticut': 'Central Conn', 'Charleston Southern': 'Charleston So',
+                            'Coastal Carolina': 'Coastal Car', 'College of Charleston': 'Col Charleston',
+                            'Eastern Illinois': 'E Illinois', 'Eastern Kentucky': 'E Kentucky',
+                            'Eastern Michigan': 'E Michigan', 'Eastern Washington': 'E Washington',
+                            'FIU': 'Florida Intl', 'Fairleigh Dickinson': 'F Dickinson',
+                            'Florida Atlantic': 'FL Atlantic', 'George Washington': 'G Washington',
+                            'Georgia Southern': 'Ga Southern', 'Grambling St.': 'Grambling',
+                            'Green Bay': 'WI Green Bay', 'Houston Christian': 'Houston Chr',
+                            'Illinois Chicago': 'IL Chicago', 'Kent St.': 'Kent',
+                            'Louisiana Lafayette': 'Louisiana', 'Loyola Chicago': 'Loyola-Chicago',
+                            'Maryland Eastern Shore': 'MD E Shore', 'Milwaukee': 'WI Milwaukee',
+                            'Monmouth': 'Monmouth NJ', "Mount St. Mary's": "Mt St Mary's",
+                            'North Carolina A&T': 'NC A&T', 'North Carolina Central': 'NC Central',
+                            'North Carolina St.': 'NC State', 'Northern Colorado': 'N Colorado',
+                            'Northern Illinois': 'N Illinois', 'Northern Kentucky': 'N Kentucky',
+                            'Prairie View A&M': 'Prairie View', 'Queens': 'Queens NC',
+                            'Southeastern Louisiana': 'SE Louisiana', 'Southern': 'Southern Univ',
+                            'Southern Illinois': 'S Illinois', 'St. Bonaventure': 'St Bonaventure',
+                            'St. Francis NY': 'St Francis NY', 'St. Francis PA': 'St Francis PA',
+                            "St. John's": "St John's", 'St. Thomas': 'St Thomas MN',
+                            'Stephen F. Austin': 'SF Austin', 'Texas Southern': 'TX Southern',
+                            'The Citadel': 'Citadel', 'UMass Lowell': 'MA Lowell',
+                            'USC Upstate': 'SC Upstate', 'UT Rio Grande Valley': 'UTRGV',
+                            'UTSA': 'UT San Antonio', 'Western Carolina': 'W Carolina',
+                            'Western Illinois': 'W Illinois', 'Western Michigan': 'W Michigan',
+                        }
+                        full_name_map = {**name_map_v2, **name_map_v3}
+
+                        # Drop existing ID cols if present from prior merge
+                        for col in ['TeamID', 'TeamName']:
+                            if col in torvik_raw.columns:
+                                torvik_raw = torvik_raw.drop(columns=[col])
+
+                        torvik_raw['TeamName'] = torvik_raw['TEAM'].map(full_name_map).fillna(torvik_raw['TEAM'])
+                        torvik_raw = torvik_raw.merge(teams_df[['TeamID', 'TeamName']], on='TeamName', how='left')
+
+                        unmatched = torvik_raw[torvik_raw['TeamID'].isna()]['TEAM'].nunique()
+                        matched = torvik_raw['TeamID'].notna().sum()
+                        log_lines.append(f"✅ Torvik name mapping: {matched} rows matched, {unmatched} unique teams unmatched")
+
                         torvik_raw = torvik_raw.dropna(subset=['TeamID'])
                         torvik_raw['TeamID'] = torvik_raw['TeamID'].astype(int)
                         torvik_df = torvik_raw
-                        log_lines.append(f"✅ Torvik data loaded: {len(torvik_df)} rows")
+                        log_lines.append(f"✅ Torvik data loaded: {len(torvik_df)} rows, seasons {sorted(torvik_df['Season'].unique())[:3]}...{sorted(torvik_df['Season'].unique())[-1]}")
                     else:
                         log_lines.append("⚠️ Could not find Year/Team columns in Torvik files")
             update_log(log_lines)
