@@ -21,7 +21,9 @@ plt.rcParams.update({
     'axes.labelcolor': '#94a3b8',
     'xtick.color': '#64748b',
     'ytick.color': '#64748b',
-    'grid.color': 'rgba(255,255,255,0.05)',
+    # Use hex or a tuple for grid color to avoid the rgba string error
+    'grid.color': '#1e293b', 
+    'axes.grid': True
 })
 
 st.set_page_config(page_title="🏀 March Madness Predictor", layout="wide", initial_sidebar_state="expanded")
