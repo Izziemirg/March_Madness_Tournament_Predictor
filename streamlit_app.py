@@ -425,10 +425,10 @@ st.sidebar.markdown("""
 """, unsafe_allow_html=True)
 
 page = st.sidebar.radio("Navigate", [
-    "\U0001f4c1 Data Upload",
-    "\u2699\ufe0f Train Model",
-    "\U0001f19a Head to Head",
-    "\U0001f3c6 Bracket Simulator",
+    "Data Upload",
+    "Train Model",
+    "Head to Head",
+    "Bracket Simulator",
 ], label_visibility="collapsed")
 
 _gc = lambda ok, warn=False: '#22c55e' if ok else ('#f59e0b' if warn else '#dc2626')
