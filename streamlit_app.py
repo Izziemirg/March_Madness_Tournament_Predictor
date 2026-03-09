@@ -32,7 +32,6 @@ BEST_PARAMS = {
     'n_estimators': 181,
     'max_depth': 3,
     'learning_rate': 0.010705,
-    'num_leaves': 7,
     'subsample': 0.888,
     'colsample_bytree': 0.852,
     'min_child_samples': 21,
@@ -40,6 +39,7 @@ BEST_PARAMS = {
     'reg_lambda': 0.032461,
     'random_state': 42,
     'n_jobs': -1,
+    'verbose': -1,
 }
 
 BRACKET_2026 = [
