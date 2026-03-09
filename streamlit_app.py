@@ -652,7 +652,8 @@ elif page == "⚙️ Train Model":
 
             seeds_df2 = seeds_df.copy()
             seeds_df2['SeedNum'] = seeds_df2['Seed'].str.extract(r'(\d+)').astype(int)
-            latest_season = int(season_df['Season'].max()) + 1
+            # Use the most recent season that has seed data — NOT +1
+            latest_season = int(seeds_df2['Season'].max())
 
             stats_index_save = {
                 (int(r.Season), int(r.TeamID)): dict(r)
@@ -861,6 +862,7 @@ elif page == "🏆 Bracket Simulator":
         results = {
             tid: count / n_sims
             for tid, count in sorted(champ_counts.items(), key=lambda x: -x[1])
+            if tid != -1  # exclude dummy ID for unmatched teams
         }
 
         top15 = list(results.items())[:15]
