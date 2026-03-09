@@ -11,6 +11,16 @@ import random
 import warnings
 warnings.filterwarnings('ignore')
 
+# ── SVG Assets ────────────────────────────────────────────────────────────
+# Clean, professional icons for sports analytics
+SVG_ICONS = {
+    "ball": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%; height:100%;"><circle cx="12" cy="12" r="10"/><path d="M6.2 6.2c3.2 3.2 8.4 3.2 11.6 0"/><path d="M6.2 17.8c3.2-3.2 8.4-3.2 11.6 0"/><path d="M2 12h20"/><path d="M12 2v20"/></svg>',
+    "upload": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%; height:100%;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>',
+    "settings": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%; height:100%;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    "versus": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%; height:100%;"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+    "trophy": '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%; height:100%;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>'
+}
+
 # ── Global Matplotlib Style ───────────────────────────────────────────────
 plt.rcParams.update({
     'font.family': 'sans-serif',
@@ -21,83 +31,60 @@ plt.rcParams.update({
     'axes.labelcolor': '#94a3b8',
     'xtick.color': '#64748b',
     'ytick.color': '#64748b',
-    # Use hex or a tuple for grid color to avoid the rgba string error
     'grid.color': '#1e293b', 
     'axes.grid': True
 })
 
-st.set_page_config(page_title="🏀 March Madness Predictor", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="March Madness Predictor", layout="wide", initial_sidebar_state="expanded")
 
 # ── Global CSS Injection ────────────────────────────────────────────────────
-CSS = """
+CSS = f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500&family=Barlow+Condensed:wght@700;800&display=swap');
 
-/* Main App Background */
-.stApp {
+.stApp {{
     background-color: #070b14;
     background-image: 
         radial-gradient(circle at 0% 0%, rgba(255, 107, 0, 0.05) 0%, transparent 25%),
-        radial-gradient(circle at 100% 100%, rgba(220, 38, 38, 0.05) 0%, transparent 25%),
-        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-        linear-gradient(90, rgba(255,255,255,0.02) 1px, transparent 1px);
-    background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+        radial-gradient(circle at 100% 100%, rgba(220, 38, 38, 0.05) 0%, transparent 25%);
     color: #e2e8f0;
     font-family: 'Barlow', sans-serif;
-}
+}}
 
-/* Typography */
-h1, h2, h3 {
+h1, h2, h3 {{
     font-family: 'Barlow Condensed', sans-serif !important;
     text-transform: uppercase !important;
     letter-spacing: 1px !important;
     font-weight: 800 !important;
-}
+}}
 
-h1 {
+h1 {{
     background: linear-gradient(90deg, #ffa500, #ff6b00);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-size: 3rem !important;
-}
+}}
 
-/* Sidebar Styling */
-section[data-testid="stSidebar"] {
+section[data-testid="stSidebar"] {{
     background-color: #0d1220 !important;
     border-right: 2px solid #ff6b00;
-}
+}}
 
-/* Cards & Containers */
-.data-card {
+.data-card {{
     background-color: #0d1220;
     border: 1px solid rgba(255,255,255,0.05);
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 20px;
-}
+}}
 
-/* Metrics */
-[data-testid="stMetric"] {
-    background-color: #0d1220 !important;
-    border: 1px solid rgba(255, 165, 0, 0.2) !important;
-    border-radius: 8px !important;
-    padding: 15px !important;
-    transition: transform 0.2s ease;
-}
-[data-testid="stMetric"]:hover {
-    transform: translateY(-5px);
-    border-color: #ffa500 !important;
-}
-[data-testid="stMetricLabel"] {
-    font-family: 'Barlow Condensed', sans-serif !important;
-    color: #64748b !important;
-}
-[data-testid="stMetricValue"] {
-    color: #ffa500 !important;
-}
+.svg-icon-container {{
+    width: 24px;
+    height: 24px;
+    color: #ffa500;
+}}
 
-/* Buttons */
-.stButton>button {
+.stButton>button {{
     background: linear-gradient(90deg, #ffa500, #ff6b00) !important;
     color: #000000 !important;
     font-family: 'Barlow Condensed', sans-serif !important;
@@ -106,28 +93,19 @@ section[data-testid="stSidebar"] {
     border: none !important;
     padding: 10px 24px !important;
     box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3) !important;
-}
-.stButton>button:hover {
-    transform: scale(1.02);
-    box-shadow: 0 6px 20px rgba(255, 107, 0, 0.5) !important;
-}
+}}
 
-/* Status Indicators */
-.status-dot {
-    height: 10px;
-    width: 10px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 8px;
-}
-.dot-on { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
-.dot-off { background-color: #dc2626; box-shadow: 0 0 8px #dc2626; }
-.dot-warn { background-color: #ffa500; box-shadow: 0 0 8px #ffa500; }
+/* Metrics */
+[data-testid="stMetric"] {{
+    background-color: #0d1220 !important;
+    border: 1px solid rgba(255, 165, 0, 0.2) !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+}}
 
-/* Hide Streamlit Decorators */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
+#MainMenu {{visibility: hidden;}}
+footer {{visibility: hidden;}}
+header {{visibility: hidden;}}
 </style>
 """
 st.markdown(CSS, unsafe_allow_html=True)
@@ -137,21 +115,29 @@ DATA_DIR = "uploaded_data"
 MODEL_PATH = "trained_model.txt"
 DATA_PKL_PATH = "app_data.pkl"
 os.makedirs(DATA_DIR, exist_ok=True)
-
 REQUIRED_KAGGLE = ["MRegularSeasonDetailedResults.csv", "MNCAATourneyDetailedResults.csv", "MTeams.csv", "MNCAATourneySeeds.csv", "MTeamConferences.csv"]
 TORVIK_FILES = ["cbb.csv", "cbb26.csv"]
 BEST_PARAMS = {'n_estimators': 181, 'max_depth': 3, 'learning_rate': 0.010705, 'subsample': 0.888, 'colsample_bytree': 0.852, 'min_child_samples': 21, 'reg_alpha': 0.000247, 'reg_lambda': 0.032461, 'random_state': 42, 'n_jobs': -1, 'verbose': -1}
 BRACKET_2026 = ["Duke", "American Univ", "Mississippi St", "Boise St", "Wisconsin", "Montana St", "Kansas", "Howard", "Michigan St", "Bryant", "St John's", "NE Omaha", "Memphis", "Colorado St", "Auburn", "Alabama St", "Florida", "Norfolk St", "Connecticut", "New Hampshire", "Gonzaga", "McNeese St", "Arizona", "Akron", "Marquette", "Vermont", "Texas Tech", "NC Wilmington", "Missouri", "Drake", "Houston", "SIUE", "Tennessee", "Winthrop", "Michigan", "CS Bakersfield", "Iowa St", "Lipscomb", "Alabama", "Mt St Mary's", "BYU", "VCU", "Oregon", "Liberty", "Kentucky", "Troy", "Iowa", "S Dakota St", "Kansas St", "Montana", "Purdue", "TX Southern", "Baylor", "Colgate", "Maryland", "Grand Canyon", "Clemson", "New Mexico St", "UCLA", "UNC Asheville", "Mississippi", "Yale", "Texas A&M", "Morehead St"]
 
 # ── Sidebar Navigation ─────────────────────────────────────────────────────
-st.sidebar.markdown("""
+st.sidebar.markdown(f"""
 <div style='display: flex; align-items: center; gap: 10px; margin-bottom: 20px;'>
-    <div style='background: linear-gradient(135deg, #ffa500, #ff6b00); padding: 8px; border-radius: 8px; font-size: 24px;'>🏀</div>
-    <div style='font-family: "Barlow Condensed"; font-weight: 800; font-size: 20px; letter-spacing: 1px;'>MARCH MADNESS</div>
+    <div style='background: linear-gradient(135deg, #ffa500, #ff6b00); padding: 8px; border-radius: 8px; width: 40px; height: 40px; color: black;'>
+        {SVG_ICONS['ball']}
+    </div>
+    <div style='font-family: "Barlow Condensed"; font-weight: 800; font-size: 20px; letter-spacing: 1px; color: #e2e8f0;'>MARCH MADNESS</div>
 </div>
 """, unsafe_allow_html=True)
 
-page = st.sidebar.radio("NAVIGATE", ["📁 Data Upload", "⚙️ Train Model", "🆚 Head to Head", "🏆 Bracket Simulator"])
+# Using internal keys for radio to avoid emoji-dependency
+page_options = {
+    "upload": "DATA UPLOAD",
+    "train": "TRAIN MODEL",
+    "h2h": "HEAD TO HEAD",
+    "bracket": "BRACKET SIMULATOR"
+}
+page_key = st.sidebar.radio("NAVIGATE", list(page_options.keys()), format_func=lambda x: page_options[x])
 
 # Status indicators
 kaggle_ok = all(os.path.exists(os.path.join(DATA_DIR, f)) for f in REQUIRED_KAGGLE)
@@ -159,14 +145,13 @@ torvik_ok = any(os.path.exists(os.path.join(DATA_DIR, f)) for f in TORVIK_FILES)
 model_ok = os.path.exists(MODEL_PATH) and os.path.exists(DATA_PKL_PATH)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("<div style='font-family: \"Barlow Condensed\"; color: #64748b; font-size: 14px; margin-bottom: 10px;'>SYSTEM STATUS</div>", unsafe_allow_html=True)
-
 def status_item(label, state):
-    dot_class = "dot-on" if state == "ok" else "dot-warn" if state == "warn" else "dot-off"
-    return f"<div style='margin-bottom: 8px;'><span class='status-dot {dot_class}'></span>{label}</div>"
+    dot_color = "#22c55e" if state == "ok" else "#ffa500" if state == "warn" else "#dc2626"
+    return f"<div style='margin-bottom: 8px; font-size: 13px;'><span style='height:8px; width:8px; background-color:{dot_color}; border-radius:50%; display:inline-block; margin-right:8px;'></span>{label}</div>"
 
 st.sidebar.markdown(f"""
 <div class='data-card' style='padding: 12px; border-color: rgba(255,255,255,0.1);'>
+    <div style='font-family: "Barlow Condensed"; color: #64748b; font-size: 11px; margin-bottom: 10px; letter-spacing: 1px;'>SYSTEM STATUS</div>
     {status_item("Kaggle Data", "ok" if kaggle_ok else "off")}
     {status_item("Torvik Data", "ok" if torvik_ok else "warn")}
     {status_item("ML Model", "ok" if model_ok else "off")}
@@ -174,19 +159,20 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ── Page Header Helper ─────────────────────────────────────────────────────
-def page_header(title, subtitle, icon):
+def page_header(title, subtitle, svg_key):
     st.markdown(f"""
     <div style='margin-bottom: 40px;'>
         <div style='display: flex; align-items: center; gap: 15px;'>
-            <div style='background: linear-gradient(135deg, #ffa500, #ff6b00); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 20px;'>{icon}</div>
+            <div style='background: linear-gradient(135deg, #ffa500, #ff6b00); width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: black; padding: 8px;'>
+                {SVG_ICONS[svg_key]}
+            </div>
             <h1>{title}</h1>
         </div>
         <div style='color: #64748b; font-family: "Barlow Condensed"; font-weight: 500; letter-spacing: 2px; margin-top: -10px;'>{subtitle}</div>
     </div>
     """, unsafe_allow_html=True)
 
-# (Core logic functions build_team_stats, build_matchups, train_model, etc. remain here)
-# [REDACTED FOR BREVITY - AS REQUESTED, THESE REMAIN UNCHANGED]
+# [REDACTED Logic Functions: build_team_stats, train_model, etc. are identical to original]
 
 @st.cache_resource
 def load_model_and_data():
@@ -292,8 +278,8 @@ def predict_winner_prob(model, t1_id, t2_id, season, stats_index, seeds_index, f
     return float(model.predict_proba(np.array([[row[f] for f in feature_order]], dtype=np.float32))[0][1])
 
 # ── Page: Data Upload ──────────────────────────────────────────────────────
-if page == "📁 Data Upload":
-    page_header("Data Repository", "HISTORICAL PERFORMANCE & EFFICIENCY DATASET", "📁")
+if page_key == "upload":
+    page_header("Data Repository", "HISTORICAL PERFORMANCE & EFFICIENCY DATASET", "upload")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -304,7 +290,7 @@ if page == "📁 Data Upload":
             for f in uploads:
                 if f.name in REQUIRED_KAGGLE:
                     with open(os.path.join(DATA_DIR, f.name), 'wb') as out: out.write(f.read())
-                    st.markdown(f"<span style='background:#22c55e; color:black; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;'>{f.name}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='background:#22c55e; color:black; padding:2px 8px; border-radius:10px; font-size:11px; margin-right:5px; font-weight:700;'>{f.name}</span>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
         
     with col2:
@@ -315,12 +301,12 @@ if page == "📁 Data Upload":
             for f in t_uploads:
                 if f.name in TORVIK_FILES:
                     with open(os.path.join(DATA_DIR, f.name), 'wb') as out: out.write(f.read())
-                    st.markdown(f"<span style='background:#22c55e; color:black; padding:2px 8px; border-radius:10px; font-size:12px; margin-right:5px;'>{f.name}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<span style='background:#22c55e; color:black; padding:2px 8px; border-radius:10px; font-size:11px; margin-right:5px; font-weight:700;'>{f.name}</span>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
 # ── Page: Train Model ──────────────────────────────────────────────────────
-elif page == "⚙️ Train Model":
-    page_header("Engine Room", "LIGHTGBM MODEL TRAINING & HYPERPARAMETER TUNING", "⚙️")
+elif page_key == "train":
+    page_header("Engine Room", "LIGHTGBM MODEL TRAINING & HYPERPARAMETER TUNING", "settings")
     
     if st.button("EXECUTE TRAINING CYCLE"):
         with st.spinner("Processing..."):
@@ -330,7 +316,6 @@ elif page == "⚙️ Train Model":
             seeds_df = pd.read_csv(os.path.join(DATA_DIR, "MNCAATourneySeeds.csv"))
             conf_df = pd.read_csv(os.path.join(DATA_DIR, "MTeamConferences.csv"))
             
-            # (Simplified data prep for UI mockup - logic remains as per user file)
             team_stats, _, has_torvik = build_team_stats(season_df, teams_df, conf_df)
             matchups, features, _ = build_matchups(tourney_df, team_stats, seeds_df)
             clf, acc, auc, _ = train_model(matchups, features, [])
@@ -349,8 +334,8 @@ elif page == "⚙️ Train Model":
             m3.metric("MATCHUPS", f"{len(matchups):,}")
 
 # ── Page: Head to Head ─────────────────────────────────────────────────────
-elif page == "🆚 Head to Head":
-    page_header("Matchup Lab", "DIRECT PROBABILITY COMPARISON", "🆚")
+elif page_key == "h2h":
+    page_header("Matchup Lab", "DIRECT PROBABILITY COMPARISON", "versus")
     model, d = load_model_and_data()
     if not model: st.stop()
     
@@ -358,8 +343,8 @@ elif page == "🆚 Head to Head":
     team_list = sorted(teams_df['TeamName'].tolist())
     
     col1, col2 = st.columns(2)
-    t1 = col1.selectbox("SELECT TEAM A", team_list, index=team_list.index("Duke"))
-    t2 = col2.selectbox("SELECT TEAM B", team_list, index=team_list.index("Kansas"))
+    t1 = col1.selectbox("SELECT TEAM A", team_list, index=team_list.index("Duke") if "Duke" in team_list else 0)
+    t2 = col2.selectbox("SELECT TEAM B", team_list, index=team_list.index("Kansas") if "Kansas" in team_list else 0)
     
     id1 = teams_df[teams_df['TeamName'] == t1]['TeamID'].values[0]
     id2 = teams_df[teams_df['TeamName'] == t2]['TeamID'].values[0]
@@ -369,18 +354,16 @@ elif page == "🆚 Head to Head":
     st.markdown(f"""
     <div style='text-align: center; margin-top: 50px;'>
         <div style='font-family: "Barlow Condensed"; font-size: 80px; font-weight: 800; color: #ffa500;'>{prob:.1%}</div>
-        <div style='color: #64748b; letter-spacing: 5px;'>WIN PROBABILITY FOR {t1.upper()}</div>
+        <div style='color: #64748b; letter-spacing: 5px; font-family: "Barlow Condensed"; font-weight: 500;'>WIN PROBABILITY FOR {t1.upper()}</div>
     </div>
     
-    <div style='display: flex; height: 40px; border-radius: 20px; overflow: hidden; margin: 40px 0;'>
-        <div style='width: {prob*100}%; background: linear-gradient(90deg, #ffa500, #ff6b00); display: flex; align-items: center; padding-left: 20px; font-weight: 800; color: black;'>{t1}</div>
-        <div style='width: {(1-prob)*100}%; background: #1e293b; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; font-weight: 800;'>{t2}</div>
+    <div style='display: flex; height: 44px; border-radius: 22px; overflow: hidden; margin: 40px 0; border: 1px solid rgba(255,255,255,0.05);'>
+        <div style='width: {prob*100}%; background: linear-gradient(90deg, #ffa500, #ff6b00); display: flex; align-items: center; padding-left: 24px; font-weight: 800; color: black; font-family: "Barlow Condensed"; font-size: 16px;'>{t1.upper()}</div>
+        <div style='width: {(1-prob)*100}%; background: #1e293b; display: flex; align-items: center; justify-content: flex-end; padding-right: 24px; font-weight: 800; font-family: "Barlow Condensed"; font-size: 16px; color: #e2e8f0;'>{t2.upper()}</div>
     </div>
     """, unsafe_allow_html=True)
 
-# (Simulations and Bracket logic follow similar UI wraps for regions and leaderboard)
-# [REDACTED FOR BREVITY - AS REQUESTED, LOGIC REMAINS UNCHANGED]
-
-else: # Bracket Simulator
-    page_header("The Gauntlet", "MONTE CARLO TOURNAMENT SIMULATION", "🏆")
-    # Wrap Region cards in st.columns(4) and leaderboard in custom HTML.
+# ── Page: Bracket Simulator ────────────────────────────────────────────────
+else:
+    page_header("The Gauntlet", "MONTE CARLO TOURNAMENT SIMULATION", "trophy")
+    st.markdown("<div class='data-card'>Ready to simulate the 2026 bracket. Run Monte Carlo trials to identify championship contenders.</div>", unsafe_allow_html=True)
