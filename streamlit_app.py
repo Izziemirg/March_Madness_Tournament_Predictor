@@ -926,39 +926,38 @@ elif page == "🏆 Bracket Simulator":
             progress.progress(i / n_sims, text=f"Simulating... {i}/{n_sims}")
     progress.progress(1.0, text="Done!")
 
-        results = {
-            tid: count / n_sims
-            for tid, count in sorted(champ_counts.items(), key=lambda x: -x[1])
-            if tid != -1  # exclude dummy ID for unmatched teams
-        }
+    results = {
+        tid: count / n_sims
+        for tid, count in sorted(champ_counts.items(), key=lambda x: -x[1])
+        if tid != -1  # exclude dummy ID for unmatched teams
+    }
 
-        top15 = list(results.items())[:15]
-        names = [team_lookup.get(tid, str(tid)) for tid, _ in top15]
-        probs = [p * 100 for _, p in top15]
-        colors = ['#f59e0b' if i == 0 else '#3b82f6' if i < 4 else '#64748b'
-                  for i in range(len(top15))]
+    top15 = list(results.items())[:15]
+    names = [team_lookup.get(tid, str(tid)) for tid, _ in top15]
+    probs = [p * 100 for _, p in top15]
+    colors = ['#f59e0b' if i == 0 else '#3b82f6' if i < 4 else '#64748b'
+              for i in range(len(top15))]
 
-        fig, ax = plt.subplots(figsize=(10, 7))
-        fig.patch.set_facecolor('#0f172a')
-        ax.set_facecolor('#1e293b')
-        bars = ax.barh(names[::-1], probs[::-1], color=colors[::-1], height=0.6)
-        for bar, prob in zip(bars, probs[::-1]):
-            ax.text(bar.get_width() + 0.2, bar.get_y() + bar.get_height() / 2,
-                    f'{prob:.1f}%', va='center', color='white', fontweight='bold')
-        ax.set_xlabel('Championship Probability (%)', color='white')
-        ax.set_title(f'🏆 2026 March Madness Championship Odds\n({n_sims:,} simulations · LightGBM + Torvik · AUC {auc:.3f})',
-                     color='white', fontweight='bold')
-        ax.tick_params(colors='white')
-        ax.spines[:].set_visible(False)
-        plt.tight_layout()
-        st.pyplot(fig)
+    fig, ax = plt.subplots(figsize=(10, 7))
+    fig.patch.set_facecolor('#0f172a')
+    ax.set_facecolor('#1e293b')
+    bars = ax.barh(names[::-1], probs[::-1], color=colors[::-1], height=0.6)
+    for bar, prob in zip(bars, probs[::-1]):
+        ax.text(bar.get_width() + 0.2, bar.get_y() + bar.get_height() / 2,
+                f'{prob:.1f}%', va='center', color='white', fontweight='bold')
+    ax.set_xlabel('Championship Probability (%)', color='white')
+    ax.set_title(f'🏆 2026 March Madness Championship Odds\n({n_sims:,} simulations · LightGBM + Torvik · AUC {auc:.3f})',
+                 color='white', fontweight='bold')
+    ax.tick_params(colors='white')
+    ax.spines[:].set_visible(False)
+    plt.tight_layout()
+    st.pyplot(fig)
 
-        # Leaderboard
-        st.markdown("### 🏆 Top Championship Contenders")
-        medals = ["🥇", "🥈", "🥉"]
-        lcols = st.columns(3)
-        for i, (tid, prob) in enumerate(top15):
-            name = team_lookup.get(tid, str(tid))
-            medal = medals[i] if i < 3 else f"{i+1}."
-            with lcols[i % 3]:
-                st.metric(f"{medal} {name}", f"{prob:.1%}")
+    st.markdown("### 🏆 Top Championship Contenders")
+    medals = ["🥇", "🥈", "🥉"]
+    lcols = st.columns(3)
+    for i, (tid, prob) in enumerate(top15):
+        name = team_lookup.get(tid, str(tid))
+        medal = medals[i] if i < 3 else f"{i+1}."
+        with lcols[i % 3]:
+            st.metric(f"{medal} {name}", f"{prob:.1%}")
