@@ -343,7 +343,7 @@ def get_analysis(prompt: str) -> str:
         import anthropic as _anthropic
         client = _anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
         response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model="claude-sonnet-4-6",
             max_tokens=500,
             tools=[{"type": "web_search_20260209", "name": "web_search"}],
             messages=[{"role": "user", "content": prompt}],
