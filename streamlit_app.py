@@ -336,6 +336,83 @@ def page_header(icon_html, title, subtitle, accent="#ffa500"):
     </div>
     """, unsafe_allow_html=True)
 
+# ── Claude Analysis Helper ────────────────────────────────────────────────
+def get_analysis(prompt: str) -> str:
+    """Call Claude Haiku with web search. Returns plain text analysis."""
+    try:
+        import anthropic as _anthropic
+        client = _anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            tools=[{"type": "web_search_20260209", "name": "web_search"}],
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return " ".join(
+            block.text for block in response.content
+            if hasattr(block, "text") and block.text
+        ).strip() or "No analysis returned."
+    except KeyError:
+        return "Add ANTHROPIC_API_KEY to your Streamlit secrets to enable analysis."
+    except Exception as e:
+        return f"Analysis unavailable — {e}"
+
+
+def _gs(obj, key):
+    """Safe stat getter for dict or pandas Series."""
+    return obj.get(key, 0) if isinstance(obj, dict) else getattr(obj, key, 0)
+
+
+def h2h_analysis_prompt(team1, team2, prob_t1, seed1, seed2, s1, s2, auc):
+    """Build the H2H matchup analysis prompt."""
+    favored = team1 if prob_t1 >= 0.5 else team2
+    fav_pct = f"{max(prob_t1, 1 - prob_t1):.0%}"
+    s1_str = f"#{int(seed1)}" if seed1 else "unseeded"
+    s2_str = f"#{int(seed2)}" if seed2 else "unseeded"
+    return f"""You are a concise college basketball analyst for the 2026 NCAA Tournament.
+
+Matchup: {team1} ({s1_str} seed) vs {team2} ({s2_str} seed)
+Model prediction: {favored} favored at {fav_pct} win probability (LightGBM, AUC {auc:.3f})
+
+Key stats ({team1} vs {team2}):
+- Win %: {_gs(s1,'win_pct'):.0%} vs {_gs(s2,'win_pct'):.0%}
+- Scoring margin: {_gs(s1,'margin'):+.1f} vs {_gs(s2,'margin'):+.1f} pts/game
+- Offensive efficiency: {_gs(s1,'off_efficiency'):.1f} vs {_gs(s2,'off_efficiency'):.1f}
+- Defensive efficiency: {_gs(s1,'def_efficiency'):.1f} vs {_gs(s2,'def_efficiency'):.1f}
+
+Use web search to find current analyst, bracketologist, and ESPN/CBS Sports predictions for this matchup. Write exactly 3-4 sentences: first explain why the model favors {favored} based on the stats, then summarize what experts are currently saying. Be specific and direct — no filler."""
+
+
+def team_analysis_prompt(name, seed, prob, n_sims, s, auc):
+    """Build the championship contender analysis prompt."""
+    s_str = f"#{int(seed)}" if seed else "unseeded"
+    return f"""You are a concise college basketball analyst for the 2026 NCAA Tournament.
+
+Team: {name} ({s_str} seed)
+Model championship probability: {prob:.1%} across {n_sims:,} Monte Carlo simulations (AUC {auc:.3f})
+
+Key stats:
+- Win %: {_gs(s,'win_pct'):.0%}
+- Scoring margin: {_gs(s,'margin'):+.1f} pts/game
+- Offensive efficiency: {_gs(s,'off_efficiency'):.1f}
+- Defensive efficiency: {_gs(s,'def_efficiency'):.1f}
+
+Use web search to find what analysts, bracketologists, and ESPN/CBS Sports are currently saying about {name}'s tournament chances. Write exactly 3-4 sentences: explain what makes {name} a title contender based on the stats, then summarize current expert opinion. Be specific and direct — no filler."""
+
+
+def render_analysis_card(text: str):
+    """Render the analysis result in a styled card."""
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,rgba(255,165,0,0.05),rgba(255,107,0,0.03));
+                border:1px solid rgba(255,165,0,0.25); border-left:3px solid #ffa500;
+                border-radius:8px; padding:16px 20px; margin-top:16px;">
+        <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.65rem; font-weight:700;
+                    letter-spacing:0.18em; color:#ffa500; margin-bottom:10px;">ANALYST INTELLIGENCE</div>
+        <div style="font-size:0.88rem; color:#cbd5e1; line-height:1.65;">{text}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 # ── Paths ──────────────────────────────────────────────────────────────────
 DATA_DIR = "uploaded_data"
 MODEL_PATH = "trained_model.txt"
@@ -1116,68 +1193,98 @@ elif page == "Head to Head":
 
             prob_t1 = predict_winner_prob(model, t1_id, t2_id, latest_season,
                                           stats_index, seeds_index, feature_order)
-            prob_t2 = 1 - prob_t1
-
             seed1 = seeds_index.get((int(latest_season), int(t1_id)))
             seed2 = seeds_index.get((int(latest_season), int(t2_id)))
-            seed1_str = f"#{int(seed1)} seed" if seed1 else "unseeded"
-            seed2_str = f"#{int(seed2)} seed" if seed2 else "unseeded"
-            favored = team1_name if prob_t1 > 0.5 else team2_name
-            fav_prob = max(prob_t1, prob_t2)
+            s1 = stats_index.get((int(latest_season), int(t1_id)), {})
+            s2 = stats_index.get((int(latest_season), int(t2_id)), {})
 
-            st.markdown(f"""
-            <div style="text-align:center; margin:30px 0 10px 0;">
-                <div style="font-family:'Barlow Condensed',sans-serif; font-size:4.5rem; font-weight:800;
-                            color:#ffa500; line-height:1; letter-spacing:-0.01em;">{prob_t1:.1%}</div>
-                <div style="font-size:0.72rem; color:#475569; letter-spacing:0.18em; margin-top:4px;">
-                    WIN PROBABILITY &mdash; {team1_name.upper()}</div>
+            # Store everything needed to re-render after the analysis button is clicked
+            st.session_state['h2h_result'] = {
+                'team1': team1_name, 'team2': team2_name,
+                'prob_t1': prob_t1, 'seed1': seed1, 'seed2': seed2,
+                's1': s1, 's2': s2,
+            }
+            st.session_state.pop('h2h_analysis', None)  # clear stale analysis on new calc
+
+    # Render results outside the button block so they survive re-renders
+    if 'h2h_result' in st.session_state:
+        r = st.session_state['h2h_result']
+        prob_t1 = r['prob_t1']
+        prob_t2 = 1 - prob_t1
+        team1_name = r['team1']
+        team2_name = r['team2']
+        seed1, seed2 = r['seed1'], r['seed2']
+        seed1_str = f"#{int(seed1)} seed" if seed1 else "unseeded"
+        seed2_str = f"#{int(seed2)} seed" if seed2 else "unseeded"
+        favored = team1_name if prob_t1 > 0.5 else team2_name
+        fav_prob = max(prob_t1, prob_t2)
+
+        st.markdown(f"""
+        <div style="text-align:center; margin:30px 0 10px 0;">
+            <div style="font-family:'Barlow Condensed',sans-serif; font-size:4.5rem; font-weight:800;
+                        color:#ffa500; line-height:1; letter-spacing:-0.01em;">{prob_t1:.1%}</div>
+            <div style="font-size:0.72rem; color:#475569; letter-spacing:0.18em; margin-top:4px;">
+                WIN PROBABILITY &mdash; {team1_name.upper()}</div>
+        </div>
+
+        <div style="display:flex; height:40px; border-radius:20px; overflow:hidden;
+                    margin:20px 0; border:1px solid rgba(255,255,255,0.06);">
+            <div style="width:{prob_t1*100:.1f}%; background:linear-gradient(90deg,#ffa500,#ff6b00);
+                        display:flex; align-items:center; padding-left:16px; overflow:hidden;">
+                <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800;
+                             color:#000; font-size:0.85rem; white-space:nowrap;">{team1_name.upper()}</span>
             </div>
-
-            <div style="display:flex; height:40px; border-radius:20px; overflow:hidden;
-                        margin:20px 0; border:1px solid rgba(255,255,255,0.06);">
-                <div style="width:{prob_t1*100:.1f}%; background:linear-gradient(90deg,#ffa500,#ff6b00);
-                            display:flex; align-items:center; padding-left:16px; overflow:hidden;">
-                    <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800;
-                                 color:#000; font-size:0.85rem; white-space:nowrap;">{team1_name.upper()}</span>
-                </div>
-                <div style="width:{prob_t2*100:.1f}%; background:#1a2540; display:flex;
-                            align-items:center; justify-content:flex-end; padding-right:16px; overflow:hidden;">
-                    <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800;
-                                 color:#94a3b8; font-size:0.85rem; white-space:nowrap;">{team2_name.upper()}</span>
-                </div>
+            <div style="width:{prob_t2*100:.1f}%; background:#1a2540; display:flex;
+                        align-items:center; justify-content:flex-end; padding-right:16px; overflow:hidden;">
+                <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800;
+                             color:#94a3b8; font-size:0.85rem; white-space:nowrap;">{team2_name.upper()}</span>
             </div>
+        </div>
 
-            <div style="display:flex; justify-content:space-between; margin-bottom:24px;">
-                <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; color:#64748b;">
-                    {seed1_str.upper()}</div>
-                <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.78rem; font-weight:700;
-                            color:#22c55e;"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='#22c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:11px;height:11px;display:inline-block;vertical-align:middle;margin-right:4px;'><polyline points='18 15 12 9 6 15'/></svg>{favored.upper()} FAVORED &mdash; {fav_prob:.1%}</div>
-                <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; color:#64748b;
-                            text-align:right;">{seed2_str.upper()}</div>
-            </div>
-            """, unsafe_allow_html=True)
+        <div style="display:flex; justify-content:space-between; margin-bottom:24px;">
+            <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; color:#64748b;">
+                {seed1_str.upper()}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.78rem; font-weight:700;
+                        color:#22c55e;"><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='#22c55e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' style='width:11px;height:11px;display:inline-block;vertical-align:middle;margin-right:4px;'><polyline points='18 15 12 9 6 15'/></svg>{favored.upper()} FAVORED &mdash; {fav_prob:.1%}</div>
+            <div style="font-family:'Barlow Condensed',sans-serif; font-size:0.72rem; color:#64748b;
+                        text-align:right;">{seed2_str.upper()}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-            ax1.barh([team2_name, team1_name], [prob_t2*100, prob_t1*100],
-                     color=['#1d4ed8', '#ffa500'], height=0.45)
-            ax1.set_xlim(0, 115)
-            ax1.set_xlabel('Win Probability (%)')
-            ax1.set_title('Win Probability Comparison', fontweight='bold', pad=12)
-            for val, nm in [(prob_t2, team2_name), (prob_t1, team1_name)]:
-                ax1.text(val*100+1.8, [team2_name, team1_name].index(nm),
-                         f'{val:.1%}', va='center', fontweight='bold', fontsize=11)
-            ax1.spines[:].set_visible(False)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+        ax1.barh([team2_name, team1_name], [prob_t2*100, prob_t1*100],
+                 color=['#1d4ed8', '#ffa500'], height=0.45)
+        ax1.set_xlim(0, 115)
+        ax1.set_xlabel('Win Probability (%)')
+        ax1.set_title('Win Probability Comparison', fontweight='bold', pad=12)
+        for val, nm in [(prob_t2, team2_name), (prob_t1, team1_name)]:
+            ax1.text(val*100+1.8, [team2_name, team1_name].index(nm),
+                     f'{val:.1%}', va='center', fontweight='bold', fontsize=11)
+        ax1.spines[:].set_visible(False)
 
-            importance = pd.Series(
-                model.feature_importance(importance_type='gain'),
-                index=model.feature_name()
-            ).sort_values(ascending=False).head(8)
-            bar_colors = ['#ffa500' if i == 0 else '#ff6b00' if i < 3 else '#1d4ed8' for i in range(8)]
-            ax2.barh(importance.index[::-1], importance.values[::-1], color=bar_colors[::-1], height=0.45)
-            ax2.set_title('Top Feature Importances', fontweight='bold', pad=12)
-            ax2.spines[:].set_visible(False)
-            plt.tight_layout(pad=2)
-            st.pyplot(fig)
+        importance = pd.Series(
+            model.feature_importance(importance_type='gain'),
+            index=model.feature_name()
+        ).sort_values(ascending=False).head(8)
+        bar_colors = ['#ffa500' if i == 0 else '#ff6b00' if i < 3 else '#1d4ed8' for i in range(8)]
+        ax2.barh(importance.index[::-1], importance.values[::-1], color=bar_colors[::-1], height=0.45)
+        ax2.set_title('Top Feature Importances', fontweight='bold', pad=12)
+        ax2.spines[:].set_visible(False)
+        plt.tight_layout(pad=2)
+        st.pyplot(fig)
+
+        # Get Analysis button
+        if st.button("Get Analysis", key="h2h_get_analysis"):
+            with st.spinner("Searching for expert analysis..."):
+                prompt = h2h_analysis_prompt(
+                    r['team1'], r['team2'], r['prob_t1'],
+                    r['seed1'], r['seed2'], r['s1'], r['s2'], auc
+                )
+                st.session_state['h2h_analysis'] = get_analysis(prompt)
+
+        if 'h2h_analysis' in st.session_state:
+            render_analysis_card(st.session_state['h2h_analysis'])
+
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -1350,13 +1457,27 @@ elif page == "Bracket Simulator":
         results = {
             tid: count / n_sims
             for tid, count in sorted(champ_counts.items(), key=lambda x: -x[1])
-            if tid != -1  # exclude dummy ID for unmatched teams
+            if tid != -1
         }
-
         top15 = list(results.items())[:15]
+
+        # Store results so they survive the analysis button re-renders
+        st.session_state['sim_results'] = {
+            'top15': top15, 'n_sims': n_sims, 'seed_assignments': seed_assignments
+        }
+        # Clear any stale per-team analyses from a previous run
+        for k in [f'sim_analysis_{j}' for j in range(3)]:
+            st.session_state.pop(k, None)
+
+    # ── Render chart + leaderboard outside the button block ──────────────
+    if 'sim_results' in st.session_state:
+        sr = st.session_state['sim_results']
+        top15 = sr['top15']
+        n_sims_stored = sr['n_sims']
+        seed_assignments = sr['seed_assignments']
+
         names = [team_lookup.get(tid, str(tid)) for tid, _ in top15]
         probs = [p * 100 for _, p in top15]
-        # Color gradient: gold → orange → blue → slate
         colors = []
         for i in range(len(top15)):
             if i == 0: colors.append('#ffd700')
@@ -1370,7 +1491,7 @@ elif page == "Bracket Simulator":
             ax.text(bar.get_width() + 0.3, bar.get_y() + bar.get_height() / 2,
                     f'{p:.1f}%', va='center', fontweight='bold', fontsize=10)
         ax.set_xlabel('Championship Probability (%)')
-        ax.set_title(f'2026 Championship Odds  |  {n_sims:,} Monte Carlo Simulations  |  AUC {auc:.3f}',
+        ax.set_title(f'2026 Championship Odds  |  {n_sims_stored:,} Monte Carlo Simulations  |  AUC {auc:.3f}',
                      fontweight='bold', fontsize=11, pad=14)
         ax.tick_params(axis='x', labelsize=9)
         ax.tick_params(axis='y', labelsize=9)
@@ -1409,3 +1530,21 @@ elif page == "Bracket Simulator":
                 <span style="font-family:'Barlow Condensed',sans-serif;font-size:1.1rem;font-weight:800;
                              color:{rc};min-width:52px;text-align:right;">{prob:.1%}</span>
             </div>""", unsafe_allow_html=True)
+
+            # Get Analysis button for top-3 only
+            if i < 3:
+                btn_key = f"sim_get_analysis_{i}"
+                analysis_key = f"sim_analysis_{i}"
+                if st.button(f"Get Analysis — {name}", key=btn_key):
+                    team_seed = (
+                        seeds_index.get((int(latest_season), int(tid)))
+                        or seed_assignments.get(int(tid))
+                    )
+                    team_stats = stats_index.get((int(latest_season), int(tid)), {})
+                    with st.spinner(f"Searching for analyst takes on {name}..."):
+                        prompt = team_analysis_prompt(
+                            name, team_seed, prob, n_sims_stored, team_stats, auc
+                        )
+                        st.session_state[analysis_key] = get_analysis(prompt)
+                if analysis_key in st.session_state:
+                    render_analysis_card(st.session_state[analysis_key])
