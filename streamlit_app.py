@@ -1273,8 +1273,14 @@ elif page == "Head to Head":
         plt.tight_layout(pad=2)
         st.pyplot(fig)
 
-        # Get Analysis button
-        if st.button("Get Analysis", key="h2h_get_analysis"):
+        # Get Analysis button — centered, matching Calculate Win Probability style
+        st.markdown("<div style='margin-top:16px;'>", unsafe_allow_html=True)
+        _, btn_col, _ = st.columns([1, 2, 1])
+        with btn_col:
+            clicked_analysis = st.button("Get Analysis", key="h2h_get_analysis",
+                                         type="primary", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        if clicked_analysis:
             with st.spinner("Searching for expert analysis..."):
                 prompt = h2h_analysis_prompt(
                     r['team1'], r['team2'], r['prob_t1'],
