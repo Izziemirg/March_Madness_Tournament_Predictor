@@ -446,7 +446,7 @@ BRACKET_2026 = [
     # EAST (Duke #1 overall)
     "Duke", "Siena",
     "Ohio St", "TCU",
-    "St John's", "N Iowa",
+    "St John's", "Northern Iowa",
     "Kansas", "Cal Baptist",
     "Louisville", "South Florida",
     "Michigan St", "N Dakota St",
@@ -465,7 +465,7 @@ BRACKET_2026 = [
 
     # MIDWEST (Michigan #1)
     "Michigan", "UMBC",           # First Four: UMBC vs Howard
-    "Georgia", "Saint Louis",
+    "Georgia", "St Louis",
     "Texas Tech", "Akron",
     "Alabama", "Hofstra",
     "Tennessee", "Miami OH",      # First Four: Miami OH vs SMU
@@ -479,7 +479,7 @@ BRACKET_2026 = [
     "Vanderbilt", "McNeese St",
     "Nebraska", "Troy",
     "North Carolina", "VCU",
-    "Illinois", "Pennsylvania",
+    "Illinois", "Penn",
     "St Mary's CA", "Texas A&M",
     "Houston", "Idaho",
 ]
