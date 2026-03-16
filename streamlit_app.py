@@ -1267,28 +1267,6 @@ elif page == "Head to Head":
         </div>
         """, unsafe_allow_html=True)
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-        ax1.barh([team2_name, team1_name], [prob_t2*100, prob_t1*100],
-                 color=['#1d4ed8', '#ffa500'], height=0.45)
-        ax1.set_xlim(0, 115)
-        ax1.set_xlabel('Win Probability (%)')
-        ax1.set_title('Win Probability Comparison', fontweight='bold', pad=12)
-        for val, nm in [(prob_t2, team2_name), (prob_t1, team1_name)]:
-            ax1.text(val*100+1.8, [team2_name, team1_name].index(nm),
-                     f'{val:.1%}', va='center', fontweight='bold', fontsize=11)
-        ax1.spines[:].set_visible(False)
-
-        importance = pd.Series(
-            model.feature_importance(importance_type='gain'),
-            index=model.feature_name()
-        ).sort_values(ascending=False).head(8)
-        bar_colors = ['#ffa500' if i == 0 else '#ff6b00' if i < 3 else '#1d4ed8' for i in range(8)]
-        ax2.barh(importance.index[::-1], importance.values[::-1], color=bar_colors[::-1], height=0.45)
-        ax2.set_title('Top Feature Importances', fontweight='bold', pad=12)
-        ax2.spines[:].set_visible(False)
-        plt.tight_layout(pad=2)
-        st.pyplot(fig)
-
         # Get Analysis button — centered, matching Calculate Win Probability style
         st.markdown("<div style='margin-top:16px;'>", unsafe_allow_html=True)
         _, btn_col, _ = st.columns([1, 2, 1])
@@ -1498,29 +1476,6 @@ elif page == "Bracket Simulator":
         n_sims_stored = sr['n_sims']
         seed_assignments = sr['seed_assignments']
 
-        names = [team_lookup.get(tid, str(tid)) for tid, _ in top15]
-        probs = [p * 100 for _, p in top15]
-        colors = []
-        for i in range(len(top15)):
-            if i == 0: colors.append('#ffd700')
-            elif i < 3: colors.append('#ffa500')
-            elif i < 7: colors.append('#1d4ed8')
-            else: colors.append('#334155')
-
-        fig, ax = plt.subplots(figsize=(11, 7))
-        bars = ax.barh(names[::-1], probs[::-1], color=colors[::-1], height=0.52)
-        for bar, p in zip(bars, probs[::-1]):
-            ax.text(bar.get_width() + 0.3, bar.get_y() + bar.get_height() / 2,
-                    f'{p:.1f}%', va='center', fontweight='bold', fontsize=10)
-        ax.set_xlabel('Championship Probability (%)')
-        ax.set_title(f'2026 Championship Odds  |  {n_sims_stored:,} Monte Carlo Simulations  |  AUC {auc:.3f}',
-                     fontweight='bold', fontsize=11, pad=14)
-        ax.tick_params(axis='x', labelsize=9)
-        ax.tick_params(axis='y', labelsize=9)
-        ax.spines[:].set_visible(False)
-        plt.tight_layout(pad=2)
-        st.pyplot(fig)
-
         st.markdown("""<div style="font-family:'Barlow Condensed',sans-serif; font-size:0.7rem; font-weight:700;
             letter-spacing:0.18em; color:#475569; margin:24px 0 10px 0;">CHAMPIONSHIP LEADERBOARD</div>""",
             unsafe_allow_html=True)
@@ -1557,7 +1512,13 @@ elif page == "Bracket Simulator":
             if i < 3:
                 btn_key = f"sim_get_analysis_{i}"
                 analysis_key = f"sim_analysis_{i}"
-                if st.button(f"Get Analysis — {name}", key=btn_key):
+                st.markdown("<div style='margin-top:16px;'>", unsafe_allow_html=True)
+                _, btn_col, _ = st.columns([1, 2, 1])
+                with btn_col:
+                    clicked_sim_analysis = st.button(f"Get Analysis — {name}", key=btn_key,
+                                                     type="primary", use_container_width=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+                if clicked_sim_analysis:
                     team_seed = (
                         seeds_index.get((int(latest_season), int(tid)))
                         or seed_assignments.get(int(tid))
