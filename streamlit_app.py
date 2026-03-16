@@ -957,7 +957,7 @@ elif page == "Train Model":
             log_lines.append("[OK] Kaggle files loaded")
 
             torvik_df = None
-          if torvik_ok:
+              if torvik_ok:
                 parts = []
                 for tf in TORVIK_FILES:
                     path = os.path.join(DATA_DIR, tf)
