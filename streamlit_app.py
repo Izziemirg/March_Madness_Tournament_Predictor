@@ -454,7 +454,7 @@ BRACKET_2026 = [
     "Connecticut", "Furman",
 
     # WEST (Arizona #1)
-    "Arizona", "LIU",
+    "Arizona", "LIU Brooklyn",
     "Villanova", "Utah St",
     "Wisconsin", "High Point",
     "Arkansas", "Hawaii",
