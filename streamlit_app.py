@@ -443,42 +443,45 @@ BEST_PARAMS = {
 }
 
 BRACKET_2026 = [
-    # EAST
-    "Duke", "American Univ",
-    "Mississippi St", "Boise St",
-    "Wisconsin", "Montana St",
-    "Kansas", "Howard",
-    "Michigan St", "Bryant",
-    "St John's", "NE Omaha",
-    "Memphis", "Colorado St",
-    "Auburn", "Alabama St",
-    # WEST
-    "Florida", "Norfolk St",
-    "Connecticut", "New Hampshire",
-    "Gonzaga", "McNeese St",
-    "Arizona", "Akron",
-    "Marquette", "Vermont",
-    "Texas Tech", "NC Wilmington",
-    "Missouri", "Drake",
-    "Houston", "SIUE",
-    # SOUTH
-    "Tennessee", "Winthrop",
-    "Michigan", "CS Bakersfield",
-    "Iowa St", "Lipscomb",
-    "Alabama", "Mt St Mary's",
-    "BYU", "VCU",
-    "Oregon", "Liberty",
-    "Kentucky", "Troy",
-    "Iowa", "S Dakota St",
-    # MIDWEST
-    "Kansas St", "Montana",
-    "Purdue", "TX Southern",
-    "Baylor", "Colgate",
-    "Maryland", "Grand Canyon",
-    "Clemson", "New Mexico St",
-    "UCLA", "UNC Asheville",
-    "Mississippi", "Yale",
-    "Texas A&M", "Morehead St",
+    # EAST (Duke #1 overall)
+    "Duke", "Siena",
+    "Ohio St", "TCU",
+    "St John's", "N Iowa",
+    "Kansas", "Cal Baptist",
+    "Louisville", "South Florida",
+    "Michigan St", "N Dakota St",
+    "UCLA", "UCF",
+    "Connecticut", "Furman",
+
+    # WEST (Arizona #1)
+    "Arizona", "LIU",
+    "Villanova", "Utah St",
+    "Wisconsin", "High Point",
+    "Arkansas", "Hawaii",
+    "BYU", "Texas",           # First Four: Texas vs NC State
+    "Gonzaga", "Kennesaw",
+    "Miami FL", "Missouri",
+    "Purdue", "Queens NC",
+
+    # MIDWEST (Michigan #1)
+    "Michigan", "UMBC",           # First Four: UMBC vs Howard
+    "Georgia", "Saint Louis",
+    "Texas Tech", "Akron",
+    "Alabama", "Hofstra",
+    "Tennessee", "Miami OH",      # First Four: Miami OH vs SMU
+    "Virginia", "Wright St",
+    "Kentucky", "Santa Clara",
+    "Iowa St", "Tennessee St",
+
+    # SOUTH (Florida #1)
+    "Florida", "Prairie View",    # First Four: Prairie View vs Lehigh
+    "Clemson", "Iowa",
+    "Vanderbilt", "McNeese St",
+    "Nebraska", "Troy",
+    "North Carolina", "VCU",
+    "Illinois", "Pennsylvania",
+    "St Mary's CA", "Texas A&M",
+    "Houston", "Idaho",
 ]
 
 # ── Sidebar ───────────────────────────────────────────────────────────────
