@@ -963,14 +963,27 @@ elif page == "Train Model":
                     path = os.path.join(DATA_DIR, tf)
                     if os.path.exists(path):
                         parts.append(pd.read_csv(path))
-                if parts:
-                    torvik_raw = pd.concat(parts, ignore_index=True).drop_duplicates()
-                    torvik_raw.columns = [c.upper() for c in torvik_raw.columns]
+               if parts:
+                    labeled = []
+                    for tf in TORVIK_FILES:
+                        path = os.path.join(DATA_DIR, tf)
+                        if os.path.exists(path):
+                            df_t = pd.read_csv(path)
+                            df_t.columns = [c.upper() for c in df_t.columns]
+                            has_year = any('YEAR' in c for c in df_t.columns)
+                            if not has_year:
+                                import re as _re
+                                m = _re.search(r'(20\d{2})', tf)
+                                if m:
+                                    df_t['YEAR'] = int(m.group(1))
+                            labeled.append(df_t)
+                    torvik_raw = pd.concat(labeled, ignore_index=True).drop_duplicates()
                     year_col = next((c for c in torvik_raw.columns if 'YEAR' in c), None)
                     team_col = next((c for c in torvik_raw.columns if c in ['TEAM', 'TEAM NAME']), None)
 
                     if year_col and team_col:
                         torvik_raw = torvik_raw.rename(columns={year_col: 'Season', team_col: 'TEAM'})
+                        torvik_raw = torvik_raw.dropna(subset=['Season'])
                         torvik_raw['Season'] = torvik_raw['Season'].astype(int)
 
                         # Full name mapping — Torvik name → Kaggle name (v2 + v3 combined)
